@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ホテル予約システム{% endblock %}</title>
+    <link rel="stylesheet" href="{{ site_url }}/css/style.css">
+    {% block stylesheets %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="{{ site_url }}/">ホーム</a>
+            {# <a href="{{ site_url }}/login">ログイン</a> #}
+            {# <a href="{{ site_url }}/register">会員登録</a> #}
+            {# 言語選択UIは後ほど追加 #}
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2023 ホテル予約システム</p>
+    </footer>
+
+    <script src="{{ site_url }}/js/script.js"></script>
+    {% block javascripts %}{% endblock %}
+</body>
+</html>
+EOL
