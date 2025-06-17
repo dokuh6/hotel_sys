@@ -1,122 +1,74 @@
 <?php
-// 管理者ページでは、通常ユーザーのセッションとは別に管理するか、
-// セッション変数で権限を明確に区別する必要がある。
-// ここでは、config.php を読み込み、セッションを開始する。
-// 管理者専用のセッションキー（例: $_SESSION['admin_id']）を使用する。
-require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../config/config.php'; // $twig もここで初期化
 
-$errors = [];
-$csrf_token = generate_csrf_token(); // config.phpの関数
+$template_vars = [
+    'page_title' => get_translation('admin_login', 'page_title', '管理者ログイン'),
+    'errors' => [],
+    'username_value' => '',
+    'csrf_token' => generate_csrf_token(),
+    'active_menu' => '', // ログインページではアクティブメニューなし
+    // No need to pass session_admin_id explicitly, base template handles it
+];
 
-// 既に管理者としてログインしている場合はダッシュボードへ
 if (isset($_SESSION['admin_id'])) {
     header('Location: dashboard.php');
     exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $template_vars['username_value'] = trim($_POST['username'] ?? '');
     if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
-        $errors[] = '無効なリクエストです。';
+        $template_vars['errors'][] = get_translation('common', 'error_csrf', '無効なリクエストです。');
     } else {
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        if (empty($username)) {
-            $errors[] = 'ユーザー名を入力してください。';
-        }
-        if (empty($password)) {
-            $errors[] = 'パスワードを入力してください。';
-        }
+        if (empty($username)) $template_vars['errors'][] = get_translation('admin_login', 'error_username_required', 'ユーザー名を入力してください。');
+        if (empty($password)) $template_vars['errors'][] = get_translation('admin_login', 'error_password_required', 'パスワードを入力してください。');
 
-        if (empty($errors)) {
+        if (empty($template_vars['errors'])) {
             $conn = null;
             try {
                 $conn = get_db_connection();
-                // admins テーブルからユーザー名で検索
                 $stmt = $conn->prepare("SELECT id, username, password_hash, is_active FROM admins WHERE username = ?");
-                if (!$stmt) throw new Exception("管理者ログインクエリ準備失敗: " . $conn->error);
+                if (!$stmt) throw new Exception(get_translation('admin_login', 'error_db_prepare_failed', 'データベースエラー(準備)')); // More specific error key
                 $stmt->bind_param("s", $username);
                 $stmt->execute();
                 $result = $stmt->get_result();
-
-                if ($result->num_rows === 1) {
-                    $admin = $result->fetch_assoc();
+                if ($admin = $result->fetch_assoc()) {
                     if ($admin['is_active'] && password_verify($password, $admin['password_hash'])) {
-                        // 認証成功
-                        session_regenerate_id(true); // セッション固定化対策
+                        session_regenerate_id(true);
                         $_SESSION['admin_id'] = $admin['id'];
                         $_SESSION['admin_username'] = $admin['username'];
-
-                        header('Location: dashboard.php'); // 管理者ダッシュボードへ
+                        header('Location: dashboard.php');
                         exit;
-                    } else {
-                        $errors[] = 'ユーザー名またはパスワードが正しくありません。';
-                        error_log("Admin login failed (inactive or wrong pass): Username {$username}");
                     }
-                } else {
-                    $errors[] = 'ユーザー名またはパスワードが正しくありません。';
-                    error_log("Admin login failed (user not found): Username {$username}");
                 }
-                $stmt->close();
+                $template_vars['errors'][] = get_translation('admin_login', 'error_auth_failed', 'ユーザー名またはパスワードが正しくありません。');
+                error_log("Admin login failed: Username {$username}");
+                if ($stmt) $stmt->close(); // Ensure statement is closed if it was prepared
             } catch (Exception $e) {
-                $errors[] = 'ログイン処理中にエラーが発生しました。';
+                $template_vars['errors'][] = get_translation('admin_login', 'error_login_exception', 'ログイン処理中にエラーが発生しました。');
                 error_log("Admin Login Exception: Username {$username} - " . $e->getMessage());
             } finally {
                 if ($conn) $conn->close();
             }
         }
     }
-    $csrf_token = generate_csrf_token(); // エラー時再生成
+    if (!empty($template_vars['errors'])) { // Regenerate token if there were errors
+       $template_vars['csrf_token'] = generate_csrf_token();
+    }
 }
 
+if (isset($twig) && $twig instanceof \Twig\Environment) {
+    try {
+        echo $twig->render('admin/login.html.twig', $template_vars);
+    } catch (Exception $e) {
+        error_log('Twig Render Error for admin/login.html.twig: ' . $e->getMessage());
+        die ('テンプレートのレンダリング中にエラーが発生しました。管理者に連絡してください。');
+    }
+} else {
+    error_log('Twig is not configured for admin login or not an instance of Twig\\Environment.');
+    die('テンプレートエンジンが正しく設定されていません。管理者に連絡してください。');
+}
 ?>
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理者ログイン - ホテル予約システム</title>
-    <link rel="stylesheet" href="../css/style.css"> {/* CSSパスを調整 */}
-    <style>
-        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f0f0f0; }
-        .login-container { background-color: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 320px; }
-        .login-container h2 { text-align: center; margin-bottom: 1em; }
-        .login-container div { margin-bottom: 1em; }
-        .login-container label { display: block; margin-bottom: 0.5em; }
-        .login-container input[type="text"],
-        .login-container input[type="password"] { width: 100%; padding: 0.8em; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .login-container button { width: 100%; padding: 0.8em; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        .login-container button:hover { background-color: #0056b3; }
-        .errors { color: red; margin-bottom: 1em; padding: 0.5em; border: 1px solid red; border-radius: 4px; background-color: #ffebeb; list-style-type: none;}
-        .errors li { margin:0; padding:0; }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <h2>管理者ログイン</h2>
-
-        <?php if (!empty($errors)): ?>
-            <ul class="errors">
-                <?php foreach ($errors as $error): ?>
-                    <li><?= h($error) ?></li>
-                <?php endforeach; ?>
-            </ul>
-        <?php endif; ?>
-
-        <form method="POST" action="login.php">
-            <input type="hidden" name="csrf_token" value="<?= h($csrf_token) ?>">
-            <div>
-                <label for="username">ユーザー名:</label>
-                <input type="text" id="username" name="username" value="<?= h($_POST['username'] ?? '') ?>" required autofocus>
-            </div>
-            <div>
-                <label for="password">パスワード:</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <div>
-                <button type="submit">ログイン</button>
-            </div>
-        </form>
-    </div>
-</body>
-</html>

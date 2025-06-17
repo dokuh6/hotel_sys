@@ -1,0 +1,62 @@
+{% extends "admin/base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block admin_content %}
+    <h2>{{ page_title }}</h2>
+    <p><a href="{{ site_url }}/admin/rooms_list.php">&laquo; {{ t('admin_room_form', 'back_to_list_link', '部屋一覧に戻る') }}</a></p>
+
+    {# Errors are displayed at the top by PHP logic if critical, or here if from form processing #}
+    {% include 'admin/_flash_messages.html.twig' %}
+
+    {# Only show form if there were no critical load errors (room_id is still set for edit, or it's a new form) #}
+    {# The PHP logic now redirects on critical load errors, so this check might be simpler #}
+    {% if room_id is null and errors is empty or room_id is not null and room.id is not null or request_method == 'POST' %}
+    <form method="POST" action="{{ site_url }}/admin/room_form.php{{ room_id ? '?id=' ~ room_id|e('url') : '' }}" class="admin-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+
+        <div>
+            <label for="name">{{ t('admin_room_form', 'label_name', '部屋名') }} <span style="color:red;">*</span>:</label>
+            <input type="text" name="name" id="name" value="{{ room.name|e('html_attr') }}" required>
+        </div>
+        <div>
+            <label for="room_type_id">{{ t('admin_room_form', 'label_room_type', '部屋タイプ') }} <span style="color:red;">*</span>:</label>
+            <select name="room_type_id" id="room_type_id" required>
+                <option value="">-- {{ t('admin_room_form', 'select_room_type_option', '選択してください') }} --</option>
+                {% for rt in room_types_list %}
+                <option value="{{ rt.id|e('html_attr') }}" {% if room.room_type_id == rt.id %}selected{% endif %}>
+                    {{ rt.name|e }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="description">{{ t('admin_room_form', 'label_description', '説明') }}:</label>
+            <textarea name="description" id="description" rows="5">{{ room.description|e }}</textarea>
+        </div>
+        <div>
+            <label for="price_per_night">{{ t('admin_room_form', 'label_price', '価格/泊 (&yen;)') }} <span style="color:red;">*</span>:</label>
+            <input type="number" name="price_per_night" id="price_per_night" value="{{ room.price_per_night|e('html_attr') }}" step="any" min="0" required> {# Changed step to "any" for float prices #}
+        </div>
+        <div>
+            <label for="capacity">{{ t('admin_room_form', 'label_capacity', '定員 (名)') }} <span style="color:red;">*</span>:</label>
+            <input type="number" name="capacity" id="capacity" value="{{ room.capacity|e('html_attr') }}" min="1" required>
+        </div>
+        <div>
+            <label for="image_path">{{ t('admin_room_form', 'label_image_path', '画像パス') }}:</label>
+            <input type="text" name="image_path" id="image_path" value="{{ room.image_path|e('html_attr') }}" placeholder="images/rooms/example.jpg">
+            <small>{{ t('admin_room_form', 'image_path_note', '画像は public ディレクトリからの相対パスで。事前にアップロードが必要です。') }}</small>
+        </div>
+        <div>
+            <label for="is_active">{{ t('admin_room_form', 'label_is_active', '公開状態') }}:</label>
+            <input type="checkbox" name="is_active" id="is_active" value="1" {% if room.is_active %}checked{% endif %}>
+            <label for="is_active" style="display:inline; font-weight:normal;">{{ t('admin_room_form', 'is_active_checkbox_label', 'この部屋を公開する') }}</label>
+        </div>
+        <div>
+            <button type="submit">{{ room_id ? t('admin_room_form', 'button_update', '更新する') : t('admin_room_form', 'button_create', '登録する') }}</button>
+        </div>
+    </form>
+    {% elseif errors is empty %} {# This case might not be reached if PHP redirects on load failure #}
+        <p>{{ t('admin_room_form', 'error_form_load', 'フォームの読み込みに失敗しました。部屋一覧から再度お試しください。')}}</p>
+    {% endif %}
+{% endblock %}

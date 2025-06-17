@@ -1,0 +1,61 @@
+{% extends "admin/base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block admin_content %}
+    <h2>{{ page_title }}</h2>
+    <p><a href="{{ site_url }}/admin/room_form.php" class="button" style="display:inline-block; padding: .5em 1em; background-color:#28a745; color:white; text-decoration:none; border-radius:.25em;">+ {{ t('admin_rooms', 'button_add_new_room', '新規部屋登録') }}</a></p>
+
+    {% include 'admin/_flash_messages.html.twig' %}
+
+    {% if rooms is not empty %}
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>{{ t('admin_rooms', 'col_id', 'ID') }}</th>
+                <th>{{ t('admin_rooms', 'col_room_name', '部屋名') }}</th>
+                <th>{{ t('admin_rooms', 'col_room_type', '部屋タイプ') }}</th>
+                <th>{{ t('admin_rooms', 'col_price_per_night', '価格/泊') }}</th>
+                <th>{{ t('admin_rooms', 'col_capacity', '定員') }}</th>
+                <th>{{ t('admin_rooms', 'col_status', '表示状態') }}</th>
+                <th>{{ t('admin_rooms', 'col_last_updated', '最終更新') }}</th>
+                <th>{{ t('admin_rooms', 'col_actions', '操作') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for room in rooms %}
+            <tr>
+                <td>{{ room.id|e }}</td>
+                <td>{{ room.room_name|e }}</td>
+                <td>{{ room.room_type_name|e }}</td>
+                <td>&yen;{{ room.price_per_night|number_format(0, '.', ',') }}</td>
+                <td>{{ room.capacity|e }} {{ t('admin_rooms', 'capacity_unit', '名') }}</td>
+                <td>
+                    {% if room.is_active %}
+                        <span style="color:green;">{{ t('admin_rooms', 'status_public', '公開中') }}</span>
+                    {% else %}
+                        <span style="color:red;">{{ t('admin_rooms', 'status_private', '非公開') }}</span>
+                    {% endif %}
+                </td>
+                <td>{{ room.updated_at|date("Y-m-d H:i") }}</td>
+                <td>
+                    <a href="{{ site_url }}/admin/room_form.php?id={{ room.id|e('url') }}" class="edit-btn">{{ t('common', 'edit', '編集') }}</a>
+                    {% if room.is_active %}
+                    <form method="POST" action="{{ site_url }}/admin/rooms_list.php" style="display:inline;" onsubmit="return confirm('{{ t('admin_rooms', 'confirm_deactivate_room', '本当にこの部屋 (ID: %id%) を非公開にしますか？')|replace({'%id%': room.id|e}) }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                        <input type="hidden" name="action" value="delete_room"> {# Action is deactivate, not physical delete #}
+                        <input type="hidden" name="room_id" value="{{ room.id|e('html_attr') }}">
+                        <button type="submit" class="delete-btn">{{ t('admin_rooms', 'button_deactivate', '非公開') }}</button>
+                    </form>
+                    {% else %}
+                        <a href="{{ site_url }}/admin/room_form.php?id={{ room.id|e('url') }}&make_active=1" class="view-btn" style="background-color:#17a2b8;">{{ t('admin_rooms', 'button_reactivate', '再公開') }}</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>{{ t('admin_rooms', 'no_rooms_found', '登録されている部屋情報はありません。') }}</p>
+    {% endif %}
+{% endblock %}

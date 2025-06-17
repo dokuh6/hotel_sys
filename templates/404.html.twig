@@ -1,0 +1,11 @@
+{% extends "base.html.twig" %} {# サイト共通のベーステンプレートを継承 #}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+    <div style="text-align: center; padding: 50px;">
+        <h1>{{ t('error_page', '404_heading', '404 - ページが見つかりません') }}</h1>
+        <p>{{ t('error_page', '404_message', 'お探しのページは見つかりませんでした。URLが正しいかご確認ください。') }}</p>
+        <p><a href="{{ site_url }}/index.php">{{ t('error_page', '404_back_link', 'トップページに戻る') }}</a></p>
+    </div>
+{% endblock %}

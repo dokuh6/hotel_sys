@@ -1,0 +1,50 @@
+{% extends "base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+    <h2>{{ t('index', 'search_heading', '空室検索') }}</h2>
+    <form method="POST" action="{{ site_url }}/index.php"> {# Assuming site_url does not end with / #}
+        <input type="hidden" name="action" value="search_rooms">
+        <div>
+            <label for="check_in_date">{{ t('index', 'check_in_date_label', 'チェックイン日:') }}</label>
+            <input type="date" id="check_in_date" name="check_in_date" value="{{ search_params.check_in_date|e('html_attr') }}" required>
+        </div>
+        <div>
+            <label for="check_out_date">{{ t('index', 'check_out_date_label', 'チェックアウト日:') }}</label>
+            <input type="date" id="check_out_date" name="check_out_date" value="{{ search_params.check_out_date|e('html_attr') }}" required>
+        </div>
+        <div>
+            <label for="num_adults">{{ t('index', 'num_adults_label', '大人の人数:') }}</label>
+            <input type="number" id="num_adults" name="num_adults" value="{{ search_params.num_adults|e('html_attr') }}" min="1" required>
+        </div>
+        <div>
+            <button type="submit">{{ t('common', 'search', '検索') }}</button>
+        </div>
+    </form>
+
+    {% if search_error %}
+        <p style="color: red;">{{ search_error|e }}</p> {# search_error is already translated in PHP #}
+    {% endif %}
+
+    {% if submitted and not search_error %}
+        <h3>{{ t('index', 'search_results_heading', '検索結果') }}</h3>
+        {% if available_rooms is not empty %}
+            <ul>
+                {% for room in available_rooms %}
+                    <li>
+                        <strong>{{ room.name|e }} ({{ room.room_type_name|e }})</strong><br>
+                        {{ t('index', 'capacity_label', '定員') }}: {{ room.capacity|e }} {{ t('index', 'people_unit', '名様') }}<br>
+                        {{ t('index', 'price_label', '料金') }}: &yen;{{ room.price_per_night|number_format(0, '.', ',') }}/{{ t('index', 'per_night_unit', '泊') }}<br>
+                        {# Link to new room details path, preserving search params for booking form continuity #}
+                        <a href="{{ site_url|trim('/') }}/room/{{ room.id|e('url') }}?check_in={{ search_params.check_in_date|e('url') }}&check_out={{ search_params.check_out_date|e('url') }}&adults={{ search_params.num_adults|e('url') }}">
+                            {{ t('index', 'view_and_book_link', '詳細を見て予約する') }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>{{ t('index', 'no_rooms_found', '該当する空室が見つかりませんでした。条件を変更してお試しください。') }}</p>
+        {% endif %}
+    {% endif %}
+{% endblock %}

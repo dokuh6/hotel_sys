@@ -1,0 +1,27 @@
+{% extends "admin/base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block admin_content %}
+    <h2>{{ page_title }}</h2>
+    <p><a href="{{ site_url }}/admin/room_types_list.php">&laquo; {{ t('admin_room_type_form', 'back_to_list_link', '部屋タイプ一覧に戻る') }}</a></p>
+
+    {# This will display errors collected in the PHP script before rendering #}
+    {% include 'admin/_flash_messages.html.twig' %}
+
+    <form method="POST" action="{{ site_url }}/admin/room_type_form.php{{ room_type_id ? '?id=' ~ room_type_id|e('url') : '' }}" class="admin-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+
+        <div>
+            <label for="name">{{ t('admin_room_type_form', 'label_name', '部屋タイプ名') }} <span style="color:red;">*</span>:</label>
+            <input type="text" name="name" id="name" value="{{ room_type.name|e('html_attr') }}" required>
+        </div>
+        <div>
+            <label for="description">{{ t('admin_room_type_form', 'label_description', '説明') }}:</label>
+            <textarea name="description" id="description" rows="5">{{ room_type.description|e }}</textarea>
+        </div>
+        <div>
+            <button type="submit">{{ room_type_id ? t('admin_room_type_form', 'button_update', '更新する') : t('admin_room_type_form', 'button_create', '登録する') }}</button>
+        </div>
+    </form>
+{% endblock %}

@@ -1,0 +1,101 @@
+<?php
+require_once __DIR__ . '/../config/config.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php?redirect_to=mypage.php');
+    exit;
+}
+
+$template_vars = [
+    'page_title' => get_translation('mypage', 'page_title', 'マイページ'),
+    'user_name' => $_SESSION['user_name'] ?? '',
+    'user_email' => $_SESSION['user_email'] ?? '',
+    'bookings' => [],
+    'errors' => [],
+    'success_message' => '',
+    'csrf_token' => '', // 初期化。キャンセル処理がある場合に設定
+];
+
+$user_id = $_SESSION['user_id'];
+
+// 予約キャンセル処理
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cancel_booking') {
+    if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
+        $template_vars['errors'][] = get_translation('common', 'error_csrf', '無効なリクエストです。');
+    } else {
+        $booking_id_to_cancel = filter_input(INPUT_POST, 'booking_id', FILTER_VALIDATE_INT);
+        if ($booking_id_to_cancel) {
+            $conn_cancel = null;
+            try {
+                $conn_cancel = get_db_connection();
+                $stmt_cancel = $conn_cancel->prepare("UPDATE bookings SET status = 'cancelled', updated_at = NOW() WHERE id = ? AND user_id = ? AND status NOT IN ('cancelled', 'completed', 'rejected')");
+                if (!$stmt_cancel) throw new Exception(get_translation('mypage', 'error_cancel_prepare_failed', 'キャンセル処理準備失敗'));
+                $stmt_cancel->bind_param("ii", $booking_id_to_cancel, $user_id);
+                if ($stmt_cancel->execute()) {
+                    if ($stmt_cancel->affected_rows > 0) {
+                        // Using named placeholders for get_translation (though this function doesn't support it yet)
+                        // For simplicity, we'll just concatenate or use simple replacement if needed.
+                        $template_vars['success_message'] = str_replace('%booking_id%', h($booking_id_to_cancel), get_translation('mypage', 'success_cancel', '予約 (ID: %booking_id%) をキャンセルしました。'));
+                    } else {
+                         $template_vars['errors'][] = str_replace('%booking_id%', h($booking_id_to_cancel), get_translation('mypage', 'error_cancel_failed_or_done', '予約 (ID: %booking_id%) のキャンセルに失敗したか、既に処理済みです。'));
+                    }
+                } else {
+                    throw new Exception(get_translation('mypage', 'error_cancel_failed', '予約キャンセル処理失敗'));
+                }
+                $stmt_cancel->close();
+            } catch (Exception $e) {
+                $template_vars['errors'][] = get_translation('mypage', 'error_cancel_exception', '予約キャンセル中にエラーが発生しました。') . ' ' . h($e->getMessage());
+                error_log("Booking Cancel Error (Mypage): UserID {$user_id}, BookingID {$booking_id_to_cancel} - " . $e->getMessage());
+            } finally {
+                if ($conn_cancel) $conn_cancel->close();
+            }
+        } else {
+            $template_vars['errors'][] = get_translation('mypage', 'error_cancel_invalid_id', 'キャンセル対象の予約IDが無効です。');
+        }
+    }
+}
+$template_vars['csrf_token'] = generate_csrf_token(); // キャンセルフォーム用に常に生成
+
+// 予約履歴の取得
+$conn = null;
+try {
+    $conn = get_db_connection();
+    $stmt_bookings = $conn->prepare("
+        SELECT b.id as booking_id, b.check_in_date, b.check_out_date, b.num_adults, b.num_children,
+               b.total_price, b.status as booking_status, b.created_at as booking_created_at,
+               r.name as room_name, rt.name as room_type_name
+        FROM bookings b
+        JOIN booking_rooms br ON b.id = br.booking_id
+        JOIN rooms r ON br.room_id = r.id
+        JOIN room_types rt ON r.room_type_id = rt.id
+        WHERE b.user_id = ?
+        ORDER BY b.check_in_date DESC, b.id DESC
+    ");
+    if (!$stmt_bookings) throw new Exception(get_translation('mypage', 'error_fetch_bookings_prepare_failed', '予約履歴取得準備失敗'));
+    $stmt_bookings->bind_param("i", $user_id);
+    $stmt_bookings->execute();
+    $result = $stmt_bookings->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $template_vars['bookings'][] = $row;
+    }
+    $stmt_bookings->close();
+} catch (Exception $e) {
+    $template_vars['errors'][] = get_translation('mypage', 'error_fetch_bookings_exception', '予約履歴の取得中にエラーが発生しました。');
+    error_log("Mypage Booking History Error: UserID {$user_id} - " . $e->getMessage());
+} finally {
+    if ($conn) $conn->close();
+}
+
+
+if (isset($twig) && $twig instanceof \Twig\Environment) {
+    try {
+        echo $twig->render('mypage.html.twig', $template_vars);
+    } catch (Exception $e) {
+        error_log('Twig Render Error for mypage.html.twig: ' . $e->getMessage());
+        die ('テンプレートのレンダリング中にエラーが発生しました。管理者に連絡してください。');
+    }
+} else {
+    error_log('Twig is not configured or not an instance of Twig\\Environment.');
+    die('テンプレートエンジンが正しく設定されていません。管理者に連絡してください。');
+}
+?>

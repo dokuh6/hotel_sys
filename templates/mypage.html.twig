@@ -1,0 +1,96 @@
+{% extends "base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block stylesheets %}
+    <style>
+        .booking-history table { width: 100%; border-collapse: collapse; margin-top: 1em; }
+        .booking-history th, .booking-history td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        .booking-history th { background-color: #f2f2f2; }
+        .status-cancelled { color: red; text-decoration: line-through; }
+        .status-confirmed { color: green; }
+        .status-pending { color: orange; }
+        .status-completed { color: blue; }
+        .status-rejected { color: grey; }
+        .status-no-show { color: darkmagenta; } /* Added for no-show */
+    </style>
+{% endblock %}
+
+{% block content %}
+    <h2>{{ t('mypage', 'heading', 'マイページ') }}</h2>
+    {# Using a placeholder in t() function for name variable #}
+    <p>{{ t('mypage', 'welcome_message', 'ようこそ、%name% 様')|replace({'%name%': user_name|e}) }}</p>
+
+    <h3>{{ t('mypage', 'registration_info_heading', '登録情報') }}</h3>
+    <p>{{ t('mypage', 'name_label', '氏名') }}: {{ user_name|e }}</p>
+    <p>{{ t('mypage', 'email_label', 'メールアドレス') }}: {{ user_email|e }}</p>
+    <p><a href="#">{{ t('mypage', 'edit_info_link', '登録情報を変更する') }}</a> ({{ t('common', 'unimplemented', '未実装') }})</p>
+    <p><a href="#">{{ t('mypage', 'change_password_link', 'パスワードを変更する') }}</a> ({{ t('common', 'unimplemented', '未実装') }})</p>
+
+    <hr>
+
+    <h3>{{ t('mypage', 'booking_history_heading', '予約履歴') }}</h3>
+    {% if errors is not empty %}
+        <div class="message error" style="color: red; border:1px solid red; padding:10px; margin-bottom:15px;">
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error|e }}</li> {# PHP side already translated #}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+    {% if success_message %}
+        <p style="color: green;">{{ success_message|e }}</p> {# PHP side already translated #}
+    {% endif %}
+
+    {% if bookings is not empty %}
+        <div class="booking-history">
+            <table>
+                <thead>
+                    <tr>
+                        <th>{{ t('mypage', 'col_booking_id', '予約番号') }}</th>
+                        <th>{{ t('mypage', 'col_room_hotel', 'ホテル・部屋') }}</th>
+                        <th>{{ t('mypage', 'col_check_in', 'チェックイン') }}</th>
+                        <th>{{ t('mypage', 'col_check_out', 'チェックアウト') }}</th>
+                        <th>{{ t('mypage', 'col_guests', '人数') }}</th>
+                        <th>{{ t('mypage', 'col_total_price', '合計金額') }}</th>
+                        <th>{{ t('mypage', 'col_booking_date', '予約日') }}</th>
+                        <th>{{ t('mypage', 'col_status', 'ステータス') }}</th>
+                        <th>{{ t('mypage', 'col_actions', '操作') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for booking in bookings %}
+                        <tr>
+                            <td>{{ booking.booking_id|e }}</td>
+                            <td>{{ booking.room_name|e }} ({{ booking.room_type_name|e }})</td>
+                            <td>{{ booking.check_in_date|e }}</td>
+                            <td>{{ booking.check_out_date|e }}</td>
+                            {# Using replace for placeholders in Twig for guest counts #}
+                            <td>{{ t('mypage', 'adults_count', '大人 %count%名')|replace({'%count%': booking.num_adults|e}) }}{% if booking.num_children > 0 %} / {{ t('mypage', 'children_count', '子供 %count%名')|replace({'%count%': booking.num_children|e}) }}{% endif %}</td>
+                            <td>&yen;{{ booking.total_price|number_format(0, '.', ',') }}</td>
+                            <td>{{ booking.booking_created_at|date("Y-m-d H:i") }}</td>
+                            <td class="status-{{ booking.booking_status|lower|e('html_attr') }}">
+                                {{ t('booking_status', booking.booking_status, booking.booking_status|capitalize)|e }}
+                            </td>
+                            <td>
+                                {% if booking.booking_status not in ['cancelled', 'completed', 'rejected', 'no-show'] %}
+                                <form method="POST" action="{{ site_url }}/mypage.php" style="display:inline;" onsubmit="return confirm('{{ t('mypage', 'confirm_cancel_booking', '本当にこの予約をキャンセルしますか？') }}');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                                    <input type="hidden" name="action" value="cancel_booking">
+                                    <input type="hidden" name="booking_id" value="{{ booking.booking_id|e('html_attr') }}">
+                                    <button type="submit">{{ t('common', 'cancel', 'キャンセル') }}</button>
+                                </form>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>{{ t('mypage', 'no_booking_history', '現在、予約履歴はありません。') }}</p>
+    {% endif %}
+{% endblock %}

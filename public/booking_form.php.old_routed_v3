@@ -1,0 +1,177 @@
+<?php
+require_once __DIR__ . '/../config/config.php';
+
+$room_id = filter_input(INPUT_GET, 'room_id', FILTER_VALIDATE_INT);
+$check_in_date_str = filter_input(INPUT_GET, 'check_in', FILTER_SANITIZE_STRING);
+$check_out_date_str = filter_input(INPUT_GET, 'check_out', FILTER_SANITIZE_STRING);
+$num_adults = filter_input(INPUT_GET, 'adults', FILTER_VALIDATE_INT, ['options' => ['default' => 1]]);
+
+$template_vars = [
+    'page_title' => get_translation('booking_form', 'page_title', '予約手続き - ホテル予約システム'),
+    'room' => null,
+    'error_message' => '',
+    'booking_error_message' => '',
+    'booking_success_message' => '',
+    'days' => 0,
+    'total_price' => 0,
+    'room_id' => $room_id,
+    'check_in_date_str' => $check_in_date_str,
+    'check_out_date_str' => $check_out_date_str,
+    'num_adults' => $num_adults,
+    'form_values' => [
+        'guest_name' => '',
+        'guest_email' => '',
+        'guest_phone' => '',
+        'special_requests' => '',
+    ],
+    'csrf_token' => generate_csrf_token(),
+];
+
+if (!$room_id) {
+    $template_vars['error_message'] = get_translation('booking_form', 'error_no_room_selected', '部屋が選択されていません。');
+} else {
+    $conn = null;
+    try {
+        $conn = get_db_connection();
+        $stmt = $conn->prepare("SELECT r.*, rt.name as room_type_name FROM rooms r JOIN room_types rt ON r.room_type_id = rt.id WHERE r.id = ? AND r.is_active = TRUE");
+        if (!$stmt) throw new Exception(get_translation('booking_form', 'error_db_prepare_failed_room', 'DBエラー(部屋情報)'));
+        $stmt->bind_param("i", $room_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows > 0) {
+            $template_vars['room'] = $result->fetch_assoc();
+            if (empty($check_in_date_str) || empty($check_out_date_str) || empty($num_adults)) {
+                $template_vars['error_message'] = get_translation('booking_form', 'error_missing_params', 'チェックイン日、チェックアウト日、または人数が指定されていません。');
+                $template_vars['room'] = null;
+            } else {
+                $check_in_date_obj = new DateTime($check_in_date_str); // Renamed to avoid conflict
+                $check_out_date_obj = new DateTime($check_out_date_str); // Renamed
+                if ($check_out_date_obj <= $check_in_date_obj) {
+                    $template_vars['error_message'] = get_translation('booking_form', 'error_checkout_after_checkin', 'チェックアウト日はチェックイン日より後。');
+                    $template_vars['room'] = null;
+                } elseif ($check_in_date_obj < new DateTime('today')) {
+                     $template_vars['error_message'] = get_translation('booking_form', 'error_checkin_not_past', 'チェックイン日は本日以降。');
+                     $template_vars['room'] = null;
+                } elseif ($num_adults < 1 || $num_adults > $template_vars['room']['capacity']) {
+                    $template_vars['error_message'] = str_replace('%capacity%', $template_vars['room']['capacity'], get_translation('booking_form', 'error_invalid_capacity', '指定人数(定員: %capacity%名)では利用不可。'));
+                    $template_vars['room'] = null;
+                } else {
+                    $interval = $check_in_date_obj->diff($check_out_date_obj);
+                    $template_vars['days'] = $interval->days;
+                    if ($template_vars['days'] <= 0) {
+                        $template_vars['error_message'] = get_translation('booking_form', 'error_invalid_stay_days', '宿泊日数が無効です。');
+                        $template_vars['room'] = null;
+                    } else {
+                        $template_vars['total_price'] = $template_vars['days'] * $template_vars['room']['price_per_night'] * $num_adults;
+                    }
+                }
+            }
+        } else {
+            $template_vars['error_message'] = get_translation('booking_form', 'error_room_not_found', '指定部屋が見つかりません。');
+        }
+        if ($stmt) $stmt->close();
+    } catch (Exception $e) {
+        $template_vars['error_message'] = get_translation('booking_form', 'error_fetch_room_exception', '予約情報取得エラー: ') . h($e->getMessage());
+        error_log("Booking Form (Load) Error: RoomID {$room_id} - " . $e->getMessage());
+        $template_vars['room'] = null;
+    } finally {
+        if ($conn) $conn->close();
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $template_vars['room'] && empty($template_vars['error_message'])) {
+    $template_vars['form_values']['guest_name'] = trim($_POST['guest_name'] ?? '');
+    $template_vars['form_values']['guest_email'] = trim($_POST['guest_email'] ?? '');
+    $template_vars['form_values']['guest_phone'] = trim($_POST['guest_phone'] ?? '');
+    $template_vars['form_values']['special_requests'] = trim($_POST['special_requests'] ?? '');
+
+    if (!isset($_POST['csrf_token']) || !validate_csrf_token($_POST['csrf_token'])) {
+        $template_vars['booking_error_message'] = get_translation('common', 'error_csrf', '無効なリクエストです。');
+    } else {
+        $guest_name = $template_vars['form_values']['guest_name'];
+        $guest_email = $template_vars['form_values']['guest_email'];
+        $guest_phone = $template_vars['form_values']['guest_phone'];
+        $special_requests = $template_vars['form_values']['special_requests'];
+        $total_price_from_form = filter_input(INPUT_POST, 'total_price_val', FILTER_VALIDATE_FLOAT); // This should match total_price calculated
+
+        if (empty($guest_name) || empty($guest_email)) {
+            $template_vars['booking_error_message'] = get_translation('booking_form', 'error_name_email_required', '氏名とメールアドレスは必須です。');
+        } elseif (!filter_var($guest_email, FILTER_VALIDATE_EMAIL)) {
+            $template_vars['booking_error_message'] = get_translation('booking_form', 'error_email_invalid', '有効なメールアドレスを入力してください。');
+        } else {
+            $conn_book = null;
+            try {
+                $conn_book = get_db_connection();
+                $conn_book->begin_transaction();
+
+                // Final availability check (copied from previous version - should be robust)
+                $stmt_check_avail = $conn_book->prepare("SELECT COUNT(*) as conflicts FROM bookings b JOIN booking_rooms br ON b.id = br.booking_id WHERE br.room_id = ? AND b.status NOT IN ('cancelled', 'rejected') AND ((b.check_in_date < ? AND b.check_out_date > ?) OR (b.check_in_date >= ? AND b.check_in_date < ?) OR (b.check_out_date > ? AND b.check_out_date <= ?) OR (b.check_in_date <= ? AND b.check_out_date >= ?))");
+                if (!$stmt_check_avail) throw new Exception("Final availability check query prepare failed: " . $conn_book->error);
+                $stmt_check_avail->bind_param("issssssss", $room_id, $check_out_date_str, $check_in_date_str, $check_in_date_str, $check_out_date_str, $check_in_date_str, $check_out_date_str, $check_in_date_str, $check_out_date_str);
+                $stmt_check_avail->execute();
+                $res_check_avail = $stmt_check_avail->get_result();
+                $conflicts = $res_check_avail->fetch_assoc()['conflicts'];
+                $stmt_check_avail->close();
+                if ($conflicts > 0) {
+                    throw new Exception(get_translation('booking_form', 'error_room_no_longer_available', '申し訳ございませんが、このお部屋は直前に予約されてしまいました。'));
+                }
+
+                $booking_status = 'confirmed';
+                $payment_status = 'unpaid';
+                $user_id_for_booking = $_SESSION['user_id'] ?? null; // Use logged-in user_id if available
+
+                $stmt_booking = $conn_book->prepare("INSERT INTO bookings (user_id, guest_name, guest_email, guest_phone, check_in_date, check_out_date, num_adults, num_children, total_price, special_requests, status, payment_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+                if (!$stmt_booking) throw new Exception(get_translation('booking_form', 'error_db_prepare_failed_booking', 'DBエラー(予約)'));
+
+                // Assuming num_children is 0 if not provided from form/GET - schema has default 0
+                $num_children_for_booking = $_POST['num_children'] ?? $template_vars['room']['num_children'] ?? 0;
+
+                $stmt_booking->bind_param("issssiisdsss", $user_id_for_booking, $guest_name, $guest_email, $guest_phone, $check_in_date_str, $check_out_date_str, $num_adults, $num_children_for_booking, $total_price_from_form, $special_requests, $booking_status, $payment_status);
+                $stmt_booking->execute();
+                $new_booking_id = $conn_book->insert_id;
+                if (!$new_booking_id) throw new Exception(get_translation('booking_form', 'error_booking_insert_id_failed', '予約ID取得失敗'));
+                $stmt_booking->close();
+
+                $price_at_booking = $template_vars['room']['price_per_night'];
+                $stmt_br = $conn_book->prepare("INSERT INTO booking_rooms (booking_id, room_id, price_at_booking, created_at) VALUES (?, ?, ?, NOW())");
+                if (!\$stmt_br) throw new Exception(get_translation('booking_form', 'error_db_prepare_failed_br', 'DBエラー(部屋予約)'));
+                $stmt_br->bind_param("iid", $new_booking_id, $room_id, $price_at_booking);
+                $stmt_br->execute();
+                if ($stmt_br->affected_rows === 0) throw new Exception(get_translation('booking_form', 'error_booking_room_link_failed', '部屋予約関連保存失敗'));
+                $stmt_br->close();
+
+                $conn_book->commit();
+                $template_vars['booking_success_message'] = str_replace('%id%', $new_booking_id, get_translation('booking_form', 'success_booking', 'ご予約が完了しました！予約番号: %id%。詳細はメールでご連絡します。'));
+
+                $booking_details_for_mail = ['id' => $new_booking_id, 'check_in_date' => $check_in_date_str, 'check_out_date' => $check_out_date_str, 'num_adults' => $num_adults, 'num_children' => $num_children_for_booking, 'total_price' => $total_price_from_form, 'special_requests' => $special_requests];
+                if (isset($template_vars['room']) && $template_vars['room'] !== null) {
+                     send_booking_confirmation_email($booking_details_for_mail, $template_vars['room'], $guest_email, $guest_name);
+                }
+
+            } catch (Exception $e) {
+                if ($conn_book) $conn_book->rollback();
+                $template_vars['booking_error_message'] = $e->getMessage(); // Show specific error from throw
+                error_log("Booking Process Error: RoomID {$room_id}, Guest {$guest_email} - " . $e->getMessage());
+            } finally {
+                if ($conn_book) $conn_book->close();
+            }
+        }
+    }
+    if (!empty($template_vars['booking_error_message']) || !empty($template_vars['booking_success_message'])) {
+        $template_vars['csrf_token'] = generate_csrf_token();
+    }
+}
+
+
+if (isset($twig) && $twig instanceof \Twig\Environment) {
+    try {
+        echo $twig->render('booking_form.html.twig', $template_vars);
+    } catch (Exception $e) {
+        error_log('Twig Render Error for booking_form.html.twig: ' . $e->getMessage());
+        die ('テンプレートのレンダリング中にエラーが発生しました。管理者に連絡してください。');
+    }
+} else {
+    error_log('Twig is not configured or not an instance of Twig\\Environment.');
+    die('テンプレートエンジンが正しく設定されていません。管理者に連絡してください。');
+}
+?>

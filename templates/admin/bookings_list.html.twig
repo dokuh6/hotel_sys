@@ -1,0 +1,94 @@
+{% extends "admin/base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block admin_content %}
+    <h2>{{ page_title }}</h2>
+
+    {% include 'admin/_flash_messages.html.twig' %} {# Assuming errors and success_message are available globally or passed to this include if specific #}
+    {# Or, if errors & success_message are specifically for this page, pass them directly: #}
+    {# {% include 'admin/_flash_messages.html.twig' with {'errors': errors, 'success_message': success_message} %} #}
+
+
+    <form method="GET" action="{{ site_url }}/admin/bookings_list.php" class="admin-form" style="display:flex; gap:10px; align-items:flex-end; background-color:#fff; padding:15px; border-radius:5px; margin-bottom:20px;">
+        <div>
+            <label for="q">{{ t('admin_bookings', 'filter_search_label', '検索:') }}</label>
+            <input type="text" name="q" id="q" value="{{ search_query|e('html_attr') }}" placeholder="{{ t('admin_bookings', 'filter_search_placeholder', 'ID, 名前, メール') }}">
+        </div>
+        <div>
+            <label for="status">{{ t('admin_bookings', 'filter_status_label', 'ステータス:') }}</label>
+            <select name="status" id="status">
+                <option value="">{{ t('admin_bookings', 'filter_status_all', 'すべて') }}</option>
+                <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>{{ t('booking_status', 'pending', 'Pending') }}</option>
+                <option value="confirmed" {% if filter_status == 'confirmed' %}selected{% endif %}>{{ t('booking_status', 'confirmed', 'Confirmed') }}</option>
+                <option value="cancelled" {% if filter_status == 'cancelled' %}selected{% endif %}>{{ t('booking_status', 'cancelled', 'Cancelled') }}</option>
+                <option value="completed" {% if filter_status == 'completed' %}selected{% endif %}>{{ t('booking_status', 'completed', 'Completed') }}</option>
+                <option value="rejected" {% if filter_status == 'rejected' %}selected{% endif %}>{{ t('booking_status', 'rejected', 'Rejected') }}</option>
+                <option value="no-show" {% if filter_status == 'no-show' %}selected{% endif %}>{{ t('booking_status', 'no-show', 'No-Show') }}</option>
+            </select>
+        </div>
+        <div>
+            <label for="date_from">{{ t('admin_bookings', 'filter_checkin_from_label', 'チェックイン開始:') }}</label>
+            <input type="date" name="date_from" id="date_from" value="{{ filter_date_from|e('html_attr') }}">
+        </div>
+        <div>
+            <label for="date_to">{{ t('admin_bookings', 'filter_checkout_to_label', 'チェックアウト終了:') }}</label>
+            <input type="date" name="date_to" id="date_to" value="{{ filter_date_to|e('html_attr') }}">
+        </div>
+        <div><button type="submit">{{ t('admin_bookings', 'filter_submit_button', '絞り込み') }}</button></div>
+        <div><a href="{{ site_url }}/admin/bookings_list.php" class="button" style="padding: .5rem 1rem; background-color:#6c757d; color:white; text-decoration:none; border-radius:.25rem;">{{ t('admin_bookings', 'filter_reset_button', 'リセット') }}</a></div>
+    </form>
+
+    {% if bookings is not empty %}
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>{{ t('admin_bookings', 'col_id', 'ID') }}</th>
+                <th>{{ t('admin_bookings', 'col_customer_guest', '顧客名/ゲスト名') }}</th>
+                <th>{{ t('admin_bookings', 'col_room_type', '部屋名 (タイプ)') }}</th>
+                <th>{{ t('admin_bookings', 'col_checkin_checkout', 'IN/OUT') }}</th>
+                <th>{{ t('admin_bookings', 'col_guests_adult_child', '人数(大人/子供)') }}</th>
+                <th>{{ t('admin_bookings', 'col_total_price', '合計金額') }}</th>
+                <th>{{ t('admin_bookings', 'col_booking_date', '予約日') }}</th>
+                <th>{{ t('admin_bookings', 'col_payment_status', '支払状況') }}</th>
+                <th>{{ t('admin_bookings', 'col_status', 'ステータス') }}</th>
+                <th>{{ t('admin_bookings', 'col_actions', '操作') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for booking in bookings %}
+            <tr>
+                <td>{{ booking.booking_id|e }}</td>
+                <td>
+                    {% if booking.user_name %}
+                        {{ booking.user_name|e }} ({{ t('admin_bookings', 'customer_type_member', '会員') }})<br><small>{{ booking.user_email|e }}</small>
+                    {% else %}
+                        {{ booking.booking_guest_name|e }} ({{ t('admin_bookings', 'customer_type_guest', 'ゲスト') }})<br><small>{{ booking.guest_email|e }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ booking.room_names|e }} <small>({{ booking.room_type_names|e }})</small></td>
+                <td>{{ booking.check_in_date|e }}<br>～<br>{{ booking.check_out_date|e }}</td>
+                <td>{{ booking.num_adults|e }} / {{ booking.num_children|default(0)|e }}</td>
+                <td>&yen;{{ booking.total_price|number_format(0, '.', ',') }}</td>
+                <td>{{ booking.booking_created_at|date("Y-m-d H:i") }}</td>
+                <td>{{ t('payment_status', booking.payment_status, booking.payment_status|capitalize)|e }}</td>
+                <td class="status-{{ booking.booking_status|lower|e('html_attr') }}">{{ t('booking_status', booking.booking_status, booking.booking_status|capitalize)|e }}</td>
+                <td>
+                    <a href="{{ site_url }}/admin/booking_edit.php?id={{ booking.booking_id|e('url') }}" class="view-btn" style="background-color:#007bff;">{{ t('common', 'view_edit', '詳細/編集') }}</a>
+                    {% if booking.booking_status not in ['cancelled', 'completed', 'rejected'] %}
+                    <form method="POST" action="{{ site_url }}/admin/bookings_list.php" style="display:inline;" onsubmit="return confirm('{{ t('admin_bookings', 'confirm_cancel_booking', '本当にこの予約 (ID: %id%) をキャンセルしますか？')|replace({'%id%': booking.booking_id|e}) }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                        <input type="hidden" name="action" value="admin_cancel_booking">
+                        <input type="hidden" name="booking_id" value="{{ booking.booking_id|e('html_attr') }}">
+                        <button type="submit" class="delete-btn">{{ t('common', 'cancel', 'キャンセル') }}</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>{{ t('admin_bookings', 'no_bookings_found', '該当する予約情報はありません。') }}</p>
+    {% endif %}
+{% endblock %}

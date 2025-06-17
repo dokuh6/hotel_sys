@@ -1,0 +1,51 @@
+{% extends "admin/base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block admin_content %}
+    <h2>{{ page_title }}</h2>
+    <p><a href="{{ site_url }}/admin/room_type_form.php" class="button" style="display:inline-block; padding: .5em 1em; background-color:#28a745; color:white; text-decoration:none; border-radius:.25em;">+ {{ t('admin_room_types', 'button_add_new_type', '新規部屋タイプ登録') }}</a></p>
+
+    {% include 'admin/_flash_messages.html.twig' %} {# Assumes errors and success_message are available to this include #}
+
+    {% if room_types is not empty %}
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>{{ t('admin_room_types', 'col_id', 'ID') }}</th>
+                <th>{{ t('admin_room_types', 'col_type_name', '部屋タイプ名') }}</th>
+                <th>{{ t('admin_room_types', 'col_description', '説明') }}</th>
+                <th>{{ t('admin_room_types', 'col_room_count', '使用部屋数') }}</th>
+                <th>{{ t('admin_room_types', 'col_last_updated', '最終更新') }}</th>
+                <th>{{ t('admin_room_types', 'col_actions', '操作') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rt in room_types %}
+            <tr>
+                <td>{{ rt.id|e }}</td>
+                <td>{{ rt.name|e }}</td>
+                <td>{{ rt.description|default('')|striptags|slice(0, 50) }}{% if rt.description|length > 50 %}...{% endif %}</td>
+                <td>{{ rt.room_count|e }}</td>
+                <td>{{ rt.updated_at|date("Y-m-d H:i") }}</td>
+                <td>
+                    <a href="{{ site_url }}/admin/room_type_form.php?id={{ rt.id|e('url') }}" class="edit-btn">{{ t('common', 'edit', '編集') }}</a>
+                    {% if rt.room_count == 0 %}
+                    <form method="POST" action="{{ site_url }}/admin/room_types_list.php" style="display:inline;" onsubmit="return confirm('{{ t('admin_room_types', 'confirm_delete_type', '本当にこの部屋タイプ (ID: %id% 「%name%」) を削除しますか？この操作は元に戻せません。')|replace({'%id%': rt.id|e, '%name%': rt.name|e}) }}');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                        <input type="hidden" name="action" value="delete_room_type">
+                        <input type="hidden" name="room_type_id" value="{{ rt.id|e('html_attr') }}">
+                        <button type="submit" class="delete-btn">{{ t('common', 'delete', '削除') }}</button>
+                    </form>
+                    {% else %}
+                        <button type="button" class="delete-btn" disabled title="{{ t('admin_room_types', 'tooltip_delete_in_use', 'この部屋タイプは部屋で使用中のため削除できません') }}">{{ t('admin_room_types', 'button_delete_disabled', '削除不可') }}</button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>{{ t('admin_room_types', 'no_room_types_found', '登録されている部屋タイプ情報はありません。') }}</p>
+    {% endif %}
+{% endblock %}

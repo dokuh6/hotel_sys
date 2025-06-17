@@ -1,0 +1,48 @@
+-- Admin Room Types List
+INSERT INTO translations (language_id, group_key, item_key, `text`) VALUES
+(1, 'admin_room_types', 'list_page_title', '部屋タイプ管理'), (2, 'admin_room_types', 'list_page_title', 'Room Type Management'),
+(1, 'admin_room_types', 'error_check_usage_prepare_failed', '使用状況チェック準備失敗'), (2, 'admin_room_types', 'error_check_usage_prepare_failed', 'Usage check query prep failed'),
+(1, 'admin_room_types', 'error_delete_in_use', '部屋タイプ (ID: %id%) は%count%件の部屋で使用中のため削除不可。'), (2, 'admin_room_types', 'error_delete_in_use', 'Room type (ID: %id%) cannot be deleted as it is used by %count% room(s).'),
+(1, 'admin_room_types', 'error_delete_prepare_failed', '削除クエリ準備失敗'), (2, 'admin_room_types', 'error_delete_prepare_failed', 'Delete query prep failed'),
+(1, 'admin_room_types', 'error_delete_execute_failed', '削除実行失敗'), (2, 'admin_room_types', 'error_delete_execute_failed', 'Delete execute failed'),
+(1, 'admin_room_types', 'delete_success', '部屋タイプ (ID: %id%) を削除しました。'), (2, 'admin_room_types', 'delete_success', 'Room type (ID: %id%) has been deleted.'),
+(1, 'admin_room_types', 'delete_failed_not_found', '部屋タイプ (ID: %id%) 削除失敗または存在せず。'), (2, 'admin_room_types', 'delete_failed_not_found', 'Failed to delete room type (ID: %id%) or not found.'),
+(1, 'admin_room_types', 'delete_exception', '部屋タイプ削除エラー。'), (2, 'admin_room_types', 'delete_exception', 'Error deleting room type.'),
+(1, 'admin_room_types', 'delete_invalid_id', '削除対象の部屋タイプIDが無効です。'), (2, 'admin_room_types', 'delete_invalid_id', 'Invalid room type ID for deletion.'),
+(1, 'admin_room_types', 'error_list_prepare_failed', '一覧クエリ準備失敗'),(2, 'admin_room_types', 'error_list_prepare_failed', 'List query prep failed'),
+(1, 'admin_room_types', 'list_fetch_exception', '部屋タイプ一覧取得エラー。'), (2, 'admin_room_types', 'list_fetch_exception', 'Error fetching room type list.'),
+(1, 'admin_room_types', 'button_add_new_type', '新規部屋タイプ登録'), (2, 'admin_room_types', 'button_add_new_type', 'Add New Room Type'),
+(1, 'admin_room_types', 'col_id', 'ID'), (2, 'admin_room_types', 'col_id', 'ID'),
+(1, 'admin_room_types', 'col_type_name', '部屋タイプ名'), (2, 'admin_room_types', 'col_type_name', 'Room Type Name'),
+(1, 'admin_room_types', 'col_description', '説明'), (2, 'admin_room_types', 'col_description', 'Description'),
+(1, 'admin_room_types', 'col_room_count', '使用部屋数'), (2, 'admin_room_types', 'col_room_count', 'No. of Rooms Using'),
+(1, 'admin_room_types', 'col_last_updated', '最終更新'), (2, 'admin_room_types', 'col_last_updated', 'Last Updated'),
+(1, 'admin_room_types', 'col_actions', '操作'), (2, 'admin_room_types', 'col_actions', 'Actions'),
+(1, 'admin_room_types', 'confirm_delete_type', '本当にこの部屋タイプ (ID: %id% 「%name%」) を削除しますか？この操作は元に戻せません。'), (2, 'admin_room_types', 'confirm_delete_type', 'Really delete this room type (ID: %id% "%name%")? This action cannot be undone.'),
+(1, 'admin_room_types', 'tooltip_delete_in_use', 'この部屋タイプは部屋で使用中のため削除できません'), (2, 'admin_room_types', 'tooltip_delete_in_use', 'Cannot delete: this room type is in use by rooms'),
+(1, 'admin_room_types', 'button_delete_disabled', '削除不可'), (2, 'admin_room_types', 'button_delete_disabled', 'Cannot Delete'),
+(1, 'admin_room_types', 'no_room_types_found', '登録されている部屋タイプ情報はありません。'), (2, 'admin_room_types', 'no_room_types_found', 'No room types found.');
+
+-- Admin Room Type Form
+INSERT INTO translations (language_id, group_key, item_key, `text`) VALUES
+(1, 'admin_room_type_form', 'edit_page_title', '部屋タイプ編集'), (2, 'admin_room_type_form', 'edit_page_title', 'Edit Room Type'),
+(1, 'admin_room_type_form', 'create_page_title', '新規部屋タイプ登録'), (2, 'admin_room_type_form', 'create_page_title', 'New Room Type Registration'),
+(1, 'admin_room_type_form', 'edit_page_title_with_id', '部屋タイプ編集 (ID: %id%)'), (2, 'admin_room_type_form', 'edit_page_title_with_id', 'Edit Room Type (ID: %id%)'),
+(1, 'admin_room_type_form', 'error_load_prepare_failed', '情報取得準備失敗'),(2, 'admin_room_type_form', 'error_load_prepare_failed', 'Load query prep failed'),
+(1, 'admin_room_type_form', 'error_not_found_flash', '指定部屋タイプ (ID: %id%) が見つかりません。'), (2, 'admin_room_type_form', 'error_not_found_flash', 'Specified room type (ID: %id%) not found.'),
+(1, 'admin_room_type_form', 'error_load_exception', '情報取得エラー。'), (2, 'admin_room_type_form', 'error_load_exception', 'Error fetching information.'),
+(1, 'admin_room_type_form', 'error_name_required', '部屋タイプ名は必須です。'), (2, 'admin_room_type_form', 'error_name_required', 'Room type name is required.'),
+(1, 'admin_room_type_form', 'error_name_exists', 'この部屋タイプ名は既に使用されています。'), (2, 'admin_room_type_form', 'error_name_exists', 'This room type name is already in use.'),
+(1, 'admin_room_type_form', 'error_update_prepare_failed', '更新クエリ準備失敗'),(2, 'admin_room_type_form', 'error_update_prepare_failed', 'Update query prep failed'),
+(1, 'admin_room_type_form', 'error_insert_prepare_failed', '登録クエリ準備失敗'),(2, 'admin_room_type_form', 'error_insert_prepare_failed', 'Insert query prep failed'),
+(1, 'admin_room_type_form', 'save_success', '部屋タイプ情報が保存されました。'), (2, 'admin_room_type_form', 'save_success', 'Room type information saved successfully.'),
+(1, 'admin_room_type_form', 'update_success', '部屋タイプ情報が更新されました。'),(2, 'admin_room_type_form', 'update_success', 'Room type information updated.'),
+(1, 'admin_room_type_form', 'create_success', '部屋タイプ情報が登録されました。'),(2, 'admin_room_type_form', 'create_success', 'Room type information created.'),
+(1, 'admin_room_type_form', 'new_id_notice', ' (新規ID: %id%)'), (2, 'admin_room_type_form', 'new_id_notice', ' (New ID: %id%)'),
+(1, 'admin_room_type_form', 'save_exception', '保存エラー。'), (2, 'admin_room_type_form', 'save_exception', 'Save error.'),
+(1, 'admin_room_type_form', 'back_to_list_link', '部屋タイプ一覧に戻る'), (2, 'admin_room_type_form', 'back_to_list_link', 'Back to Room Type List'),
+(1, 'admin_room_type_form', 'label_name', '部屋タイプ名'), (2, 'admin_room_type_form', 'label_name', 'Room Type Name'),
+(1, 'admin_room_type_form', 'label_description', '説明'), (2, 'admin_room_type_form', 'label_description', 'Description'),
+(1, 'admin_room_type_form', 'button_update', '更新する'), (2, 'admin_room_type_form', 'button_update', 'Update'),
+(1, 'admin_room_type_form', 'button_create', '登録する'), (2, 'admin_room_type_form', 'button_create', 'Create')
+ON DUPLICATE KEY UPDATE `text` = VALUES(`text`);
