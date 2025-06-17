@@ -193,4 +193,110 @@ function send_booking_confirmation_email($booking_details, $room_details, $guest
         return false;
     }
 }
+
+// --- 多言語対応 ---
+
+define('DEFAULT_LANGUAGE_CODE', 'ja'); // デフォルト言語
+
+// 現在の言語を設定/取得する関数
+function set_current_language($lang_code) {
+    // 有効な言語コードかlanguagesテーブルで確認する方が望ましい
+    // ここでは簡易的にセッションに保存
+    $_SESSION['current_language'] = $lang_code;
+}
+
+function get_current_language() {
+    return $_SESSION['current_language'] ?? DEFAULT_LANGUAGE_CODE;
+}
+
+// 翻訳テキストを取得する関数 (DB接続が必要)
+function get_translation($group_key, $item_key, $default_text = '') {
+    static $translations = []; // 静的キャッシュ
+    $current_lang = get_current_language();
+
+    if (isset($translations[$current_lang][$group_key][$item_key])) {
+        return $translations[$current_lang][$group_key][$item_key];
+    }
+
+    $conn = null;
+    try {
+        $conn = get_db_connection(); // 既存のDB接続関数を利用
+        $stmt = $conn->prepare("
+            SELECT t.text
+            FROM translations t
+            JOIN languages l ON t.language_id = l.id
+            WHERE l.code = ? AND t.group_key = ? AND t.item_key = ?
+        ");
+        if (!$stmt) {
+            error_log("Translation query prepare failed for lang '{$current_lang}', key '{$group_key}.{$item_key}': " . ($conn->error ?? 'Unknown error'));
+            if ($conn) $conn->close();
+            return $default_text ?: $item_key; // クエリ準備失敗時はデフォルトを返す
+        }
+        $stmt->bind_param("sss", $current_lang, $group_key, $item_key);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($row = $result->fetch_assoc()) {
+            if (!isset($translations[$current_lang])) $translations[$current_lang] = [];
+            if (!isset($translations[$current_lang][$group_key])) $translations[$current_lang][$group_key] = [];
+            $translations[$current_lang][$group_key][$item_key] = $row['text'];
+            $stmt->close();
+            if ($conn) $conn->close(); // 接続を閉じる
+            return $row['text'];
+        }
+        $stmt->close();
+    } catch (Exception $e) {
+        error_log("Translation Error for lang '{$current_lang}', key '{$group_key}.{$item_key}': " . $e->getMessage());
+    } finally {
+        // Ensure connection is closed if it was opened and is still active
+        if ($conn && $conn->ping()) {
+             $conn->close();
+        }
+    }
+
+    // Fallback: if text not found for current language, try default language (optional)
+    // This can be complex due to potential recursion or needing another query.
+    // For simplicity, if not found, we just return default text or key.
+    // if ($current_lang !== DEFAULT_LANGUAGE_CODE) {
+    //    // return get_translation_for_language(DEFAULT_LANGUAGE_CODE, $group_key, $item_key, $default_text);
+    // }
+
+    return $default_text ?: $item_key; // キー自体を返すか、指定されたデフォルト
+}
+
+// 言語変更処理 (通常はサイトの共通ヘッダーやコントローラーで処理)
+function handle_language_change() {
+    if (isset($_GET['lang'])) {
+        $selected_lang = trim($_GET['lang']);
+        // TODO: $selected_lang が languages テーブルに存在する有効なコードか検証
+        // For now, directly set it.
+        // A good place for validation would be to query the `languages` table.
+        // Example:
+        // $conn_lang_check = get_db_connection();
+        // $stmt_lang_check = $conn_lang_check->prepare("SELECT COUNT(*) as count FROM languages WHERE code = ?");
+        // $stmt_lang_check->bind_param("s", $selected_lang);
+        // $stmt_lang_check->execute();
+        // $res_lang_check = $stmt_lang_check->get_result()->fetch_assoc();
+        // $stmt_lang_check->close();
+        // $conn_lang_check->close();
+        // if ($res_lang_check['count'] > 0) {
+        //    set_current_language($selected_lang);
+        // }
+        // For this subtask, we'll assume valid lang codes are passed.
+        set_current_language($selected_lang);
+
+        // Optional: Redirect to remove 'lang' GET parameter from URL
+        // This can be complex if other GET parameters need to be preserved.
+        // $uri_parts = explode('?', $_SERVER['REQUEST_URI'], 2);
+        // $redirect_url = $uri_parts[0];
+        // if (isset($uri_parts[1])) {
+        //     parse_str($uri_parts[1], $query_params);
+        //     unset($query_params['lang']);
+        //     if (!empty($query_params)) {
+        //         $redirect_url .= '?' . http_build_query($query_params);
+        //     }
+        // }
+        // header('Location: ' . $redirect_url);
+        // exit;
+    }
+}
 EOL

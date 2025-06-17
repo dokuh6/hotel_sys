@@ -1,0 +1,79 @@
+{% extends "base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+    <h2>{{ t('booking_form', 'heading', '予約手続き') }}</h2>
+
+    <nav>
+        <a href="{{ site_url }}/index.php">{{ t('booking_form', 'back_to_search_link', '空室検索に戻る') }}</a>
+        {% if room_id and room %} {# Ensure room is not null before creating link #}
+        | <a href="{{ site_url }}/room_details.php?id={{ room_id|e('url') }}&check_in={{ check_in_date_str|e('url') }}&check_out={{ check_out_date_str|e('url') }}&adults={{ num_adults|e('url') }}">{{ t('booking_form', 'back_to_room_details_link', '部屋詳細に戻る') }}</a>
+        {% endif %}
+    </nav>
+
+    {% if error_message %} {# Initial load errors (e.g. room not found, invalid params) #}
+        <p style="color: red;">{{ error_message|e }}</p>
+        <p><a href="{{ site_url }}/index.php">{{ t('booking_form', 'retry_search_link', '再度検索する') }}</a></p>
+    {% elseif room %} {# Only display booking form if room details are successfully loaded #}
+        <h3>{{ t('booking_form', 'confirm_booking_details_heading', '予約内容の確認') }}</h3>
+        <p><strong>{{ t('booking_form', 'room_type_label', '部屋タイプ') }}:</strong> {{ room.name|e }} ({{ room.room_type_name|e }})</p>
+        <p><strong>{{ t('booking_form', 'check_in_date_label', 'チェックイン日') }}:</strong> {{ check_in_date_str|e }}</p>
+        <p><strong>{{ t('booking_form', 'check_out_date_label', 'チェックアウト日') }}:</strong> {{ check_out_date_str|e }}</p>
+        <p><strong>{{ t('booking_form', 'stay_duration_label', '宿泊日数') }}:</strong> {{ days|e }} {{ t('booking_form', 'nights_unit', '泊') }}</p>
+        <p><strong>{{ t('booking_form', 'num_guests_label', 'ご利用人数') }}:</strong> {{ t('booking_form', 'adults_count_label', '大人 %count% 名')|replace({'%count%': num_adults|e}) }}</p> {# Children count can be added here if needed #}
+        <p><strong>{{ t('booking_form', 'total_price_label', '予定合計金額') }}:</strong> &yen;{{ total_price|number_format(0, '.', ',') }} ({{ t('booking_form', 'tax_inclusive_note', '税込み') }})</p>
+        <hr>
+
+        {% if booking_success_message %}
+            <p style="color: green;">{{ booking_success_message|e }}</p>
+            <p><a href="{{ site_url }}/index.php">{{ t('booking_form', 'back_to_top_link', 'トップページに戻る') }}</a></p>
+        {% else %}
+            <h3>{{ t('booking_form', 'customer_info_heading', 'お客様情報入力') }}</h3>
+            {% if booking_error_message %}
+                <p style="color: red;">{{ booking_error_message|e }}</p> {# Booking submission errors #}
+            {% endif %}
+            {# The action URL needs to include all GET params to repopulate form correctly on error or if room details are needed again #}
+            <form method="POST" action="{{ site_url }}/booking_form.php?room_id={{ room_id|e('url') }}&check_in={{ check_in_date_str|e('url') }}&check_out={{ check_out_date_str|e('url') }}&adults={{ num_adults|e('url') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+                <input type="hidden" name="total_price_val" value="{{ total_price|e('html_attr') }}">
+                {# Add num_children if it's part of the booking params #}
+                {# <input type="hidden" name="num_children" value="{{ form_values.num_children|e('html_attr') }}"> #}
+
+
+                {% if not session_user_id %} {# Show guest info fields only if not logged in #}
+                    <div>
+                        <label for="guest_name">{{ t('booking_form', 'guest_name_label', '氏名') }} <span style="color:red;">*</span>:</label>
+                        <input type="text" id="guest_name" name="guest_name" value="{{ form_values.guest_name|e('html_attr') }}" required>
+                    </div>
+                    <div>
+                        <label for="guest_email">{{ t('booking_form', 'guest_email_label', 'メールアドレス') }} <span style="color:red;">*</span>:</label>
+                        <input type="email" id="guest_email" name="guest_email" value="{{ form_values.guest_email|e('html_attr') }}" required>
+                    </div>
+                    <div>
+                        <label for="guest_phone">{{ t('booking_form', 'guest_phone_label', '電話番号') }}:</label>
+                        <input type="tel" id="guest_phone" name="guest_phone" value="{{ form_values.guest_phone|e('html_attr') }}">
+                    </div>
+                {% else %}
+                     <p>{{ t('booking_form', 'logged_in_as', '予約者: %name% (%email%)')|replace({'%name%': session_user_name|e, '%email%': session_user_email|e }) }}</p>
+                     {# Hidden fields for logged-in user's name and email if needed by POST, though user_id is primary #}
+                     <input type="hidden" name="guest_name" value="{{ session_user_name|e('html_attr') }}">
+                     <input type="hidden" name="guest_email" value="{{ session_user_email|e('html_attr') }}">
+                {% endif %}
+                <div>
+                    <label for="special_requests">{{ t('booking_form', 'special_requests_label', '備考・ご要望など') }}:</label>
+                    <textarea id="special_requests" name="special_requests" rows="4">{{ form_values.special_requests|e }}</textarea>
+                </div>
+                <div>
+                    <p>{{ t('booking_form', 'payment_method_note', 'お支払い方法: 現地決済 (現在はこれのみ選択可能です)') }}</p>
+                </div>
+                <div>
+                    <button type="submit">{{ t('booking_form', 'submit_booking_button', 'この内容で予約する') }}</button>
+                </div>
+            </form>
+        {% endif %}
+    {% else %} {# error_message was set, or room is null and no error_message (should not happen if logic is correct) #}
+        <p>{{ t('booking_form', 'cannot_proceed_booking', '予約処理を開始できませんでした。お手数ですが、再度空室検索からお試しください。') }}</p>
+        <p><a href="{{ site_url }}/index.php">{{ t('booking_form', 'go_to_search_page_link', '空室検索ページへ') }}</a></p>
+    {% endif %}
+{% endblock %}

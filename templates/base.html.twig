@@ -1,19 +1,39 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="{{ current_language|default('ja') }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}ホテル予約システム{% endblock %}</title>
+    <title>{% block page_title %}{{ page_title_default }}{% endblock %} - {{ t('common', 'hotel_booking_system', 'ホテル予約システム') }}</title>
     <link rel="stylesheet" href="{{ site_url }}/css/style.css">
+    {# public/css/style.css を想定 #}
     {% block stylesheets %}{% endblock %}
 </head>
 <body>
     <header>
         <nav>
-            <a href="{{ site_url }}/">ホーム</a>
-            {# <a href="{{ site_url }}/login">ログイン</a> #}
-            {# <a href="{{ site_url }}/register">会員登録</a> #}
-            {# 言語選択UIは後ほど追加 #}
+            {# Assuming SITE_URL is like http://localhost/hotel_booking_system and .htaccess is in public/ #}
+            {# Then site_url should point to http://localhost/hotel_booking_system/public for these links to work with the new router #}
+            {# Or, if SITE_URL is http://localhost/hotel_booking_system and public is the doc root, then /login is correct #}
+            {# For now, assuming SITE_URL is the base path and /public is part of URL or handled by server config #}
+            {# Let's adjust to a more common setup where SITE_URL is the true root, and links are relative to that. #}
+            {# The router is in public/index.php, so links should be like /login mapped by .htaccess to /public/index.php?path=login #}
+            {# For simplicity with current SITE_URL definition (likely without /public), we form paths like /public/home or /public/login #}
+            {# This depends on how SITE_URL is defined and if .htaccess is in project root or public/. #}
+            {# Given .htaccess is in public/, SITE_URL should be the path to public/. Or adjust links. #}
+            {# Assuming SITE_URL is the path that reaches the public directory. #}
+            <a href="{{ site_url|trim('/') }}/home">{{ t('common', 'home', 'ホーム') }}</a>
+            {% if session_user_id %}
+                <a href="{{ site_url|trim('/') }}/mypage">{{ t('common', 'mypage', 'マイページ') }} ({{ session_user_name }})</a>
+                <a href="{{ site_url|trim('/') }}/logout">{{ t('common', 'logout', 'ログアウト') }}</a>
+            {% else %}
+                <a href="{{ site_url|trim('/') }}/login">{{ t('common', 'login', 'ログイン') }}</a>
+                <a href="{{ site_url|trim('/') }}/register">{{ t('common', 'register', '会員登録') }}</a>
+            {% endif %}
+
+            <span style="margin-left: 20px;">Language:
+                <a href="?lang=ja" {% if current_language == 'ja' %}style="font-weight:bold;"{% endif %}>日本語</a> |
+                <a href="?lang=en" {% if current_language == 'en' %}style="font-weight:bold;"{% endif %}>English</a>
+            </span>
         </nav>
     </header>
 
@@ -22,11 +42,11 @@
     </main>
 
     <footer>
-        <p>&copy; 2023 ホテル予約システム</p>
+        <p>&copy; {{ "now"|date("Y") }} {{ t('common', 'hotel_booking_system', 'ホテル予約システム') }}</p>
     </footer>
 
     <script src="{{ site_url }}/js/script.js"></script>
+    {# public/js/script.js を想定 #}
     {% block javascripts %}{% endblock %}
 </body>
 </html>
-EOL

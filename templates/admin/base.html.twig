@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="{{ current_language|default('ja') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block page_title %}{{ t('admin_common', 'default_admin_title', '管理画面') }}{% endblock %} - {{ t('common', 'hotel_booking_system', 'ホテル予約システム') }}</title>
+    <link rel="stylesheet" href="{{ site_url }}/admin/css/admin_style.css"> {# public/admin/css を想定 #}
+    {% block admin_stylesheets %}{% endblock %}
+</head>
+<body>
+    <header class="admin-header">
+        <h1><a href="{{ site_url }}/admin/dashboard.php" style="color:white; text-decoration:none;">{{ t('common', 'hotel_booking_system', 'ホテル予約システム') }} {{ t('admin_common', 'admin_panel_suffix', '管理画面') }}</a></h1>
+        <nav>
+            {% if session_admin_id %}
+                <span>{{ t('admin_common', 'welcome_message', 'ようこそ、%name% 様')|replace({'%name%': session_admin_username|e }) }}</span>
+                <a href="{{ site_url }}/admin/logout.php">{{ t('common', 'logout', 'ログアウト') }}</a>
+            {% endif %}
+            {# 言語スイッチャーを管理者画面にも置くか検討。今回は省略。 #}
+            {# If language switcher is needed, it can be added here similar to public base.html.twig #}
+            {# Example:
+            <span style="margin-left: 20px;">Language:
+                <a href="?lang=ja" {% if current_language == 'ja' %}style="font-weight:bold;"{% endif %}>日本語</a> |
+                <a href="?lang=en" {% if current_language == 'en' %}style="font-weight:bold;"{% endif %}>English</a>
+            </span>
+            #}
+        </nav>
+    </header>
+
+    <div class="admin-container">
+        {% if session_admin_id %} {# ログインしている時のみサイドバー表示 #}
+        <aside class="admin-sidebar">
+            <h2>{{ t('admin_common', 'menu_heading', 'メニュー') }}</h2>
+            <ul>
+                <li><a href="{{ site_url }}/admin/dashboard.php" {% if active_menu == 'dashboard' %}class="active"{% endif %}>{{ t('admin_common', 'menu_dashboard', 'ダッシュボード') }}</a></li>
+                <li><a href="{{ site_url }}/admin/bookings_list.php" {% if active_menu == 'bookings' %}class="active"{% endif %}>{{ t('admin_common', 'menu_bookings', '予約管理') }}</a></li>
+                <li><a href="{{ site_url }}/admin/rooms_list.php" {% if active_menu == 'rooms' %}class="active"{% endif %}>{{ t('admin_common', 'menu_rooms', '部屋管理') }}</a></li>
+                <li><a href="{{ site_url }}/admin/room_types_list.php" {% if active_menu == 'room_types' %}class="active"{% endif %}>{{ t('admin_common', 'menu_room_types', '部屋タイプ管理') }}</a></li>
+                <li><a href="{{ site_url }}/admin/users_list.php" {% if active_menu == 'users' %}class="active"{% endif %}>{{ t('admin_common', 'menu_users', '顧客管理') }}</a></li>
+                <li><a href="{{ site_url }}/admin/admin_users_list.php" {% if active_menu == 'admin_users' %}class="active"{% endif %}>{{ t('admin_common', 'menu_admin_users', '管理者管理') }}</a></li>
+                <li><a href="{{ site_url }}/admin/settings.php" {% if active_menu == 'settings' %}class="active"{% endif %}>{{ t('admin_common', 'menu_settings', 'サイト設定') }}</a></li>
+            </ul>
+        </aside>
+        {% endif %}
+
+        <main class="admin-main-content {% if not session_admin_id %}login-page-content{% endif %}">
+            {% block admin_content %}{% endblock %}
+        </main>
+    </div>
+    {% block admin_javascripts %}{% endblock %}
+</body>
+</html>

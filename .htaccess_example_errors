@@ -1,0 +1,13 @@
+# カスタムエラーページの指定 (Apache)
+ErrorDocument 400 /public/400.php  # Bad Request (必要なら作成)
+ErrorDocument 401 /public/401.php  # Unauthorized (必要なら作成)
+ErrorDocument 403 /public/403.php  # Forbidden (必要なら作成)
+ErrorDocument 404 /public/404.php
+ErrorDocument 500 /public/500.php
+ErrorDocument 503 /public/503.php  # Service Unavailable (必要なら作成)
+
+# URLリライティング設定 (例: index.php への集約など) は別途記述
+# RewriteEngine On
+# RewriteCond %{REQUEST_FILENAME} !-f
+# RewriteCond %{REQUEST_FILENAME} !-d
+# RewriteRule ^(.*)$ index.php?path=$1 [L,QSA]

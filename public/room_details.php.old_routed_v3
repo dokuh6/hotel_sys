@@ -1,0 +1,58 @@
+<?php
+require_once __DIR__ . '/../config/config.php';
+
+$room_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+$template_vars = [
+    // page_title will be set dynamically based on room name if room is found
+    'page_title_default' => get_translation('room_details', 'default_page_title', '部屋詳細'),
+    'room' => null,
+    'error_message' => '',
+    'check_in_date' => filter_input(INPUT_GET, 'check_in', FILTER_SANITIZE_STRING),
+    'check_out_date' => filter_input(INPUT_GET, 'check_out', FILTER_SANITIZE_STRING),
+    'num_adults' => filter_input(INPUT_GET, 'adults', FILTER_VALIDATE_INT, ['options' => ['default' => 1]]),
+];
+$template_vars['page_title'] = $template_vars['page_title_default']; // Initialize page_title
+
+if (!$room_id) {
+    $template_vars['error_message'] = get_translation('room_details', 'error_invalid_room_id', '部屋IDが無効です。');
+} else {
+    $conn = null;
+    try {
+        $conn = get_db_connection();
+        $stmt = $conn->prepare("
+            SELECT r.*, rt.name as room_type_name, rt.description as room_type_description
+            FROM rooms r
+            JOIN room_types rt ON r.room_type_id = rt.id
+            WHERE r.id = ? AND r.is_active = TRUE
+        ");
+        if (!$stmt) throw new Exception(get_translation('room_details', 'error_db_prepare_failed', 'データベースエラーが発生しました。'));
+        $stmt->bind_param("i", $room_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows > 0) {
+            $template_vars['room'] = $result->fetch_assoc();
+            $template_vars['page_title'] = $template_vars['room']['name']; // Set page title to room name
+        } else {
+            $template_vars['error_message'] = get_translation('room_details', 'error_room_not_found', '指定された部屋が見つからないか、現在利用できません。');
+        }
+        $stmt->close();
+    } catch (Exception $e) {
+        $template_vars['error_message'] = get_translation('room_details', 'error_fetch_exception', '部屋情報の取得中にエラーが発生しました。');
+        error_log("Room Details Error: ID {$room_id} - " . $e->getMessage());
+    } finally {
+        if ($conn) $conn->close();
+    }
+}
+
+if (isset($twig) && $twig instanceof \Twig\Environment) {
+    try {
+        echo $twig->render('room_details.html.twig', $template_vars);
+    } catch (Exception $e) {
+        error_log('Twig Render Error for room_details.html.twig: ' . $e->getMessage());
+        die ('テンプレートのレンダリング中にエラーが発生しました。管理者に連絡してください。');
+    }
+} else {
+    error_log('Twig is not configured or not an instance of Twig\\Environment.');
+    die('テンプレートエンジンが正しく設定されていません。管理者に連絡してください。');
+}
+?>

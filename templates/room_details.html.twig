@@ -1,0 +1,58 @@
+{% extends "base.html.twig" %}
+
+{% block page_title %}{% if room %}{{ room.name|e }}{% else %}{{ page_title_default }}{% endif %}{% endblock %}
+
+{% block content %}
+    <nav>
+        {# Assuming index.php handles search parameters from GET for convenience #}
+        <a href="{{ site_url }}/index.php?check_in_date={{ check_in_date|e('url') }}&check_out_date={{ check_out_date|e('url') }}&num_adults={{ num_adults|e('url') }}&action=search_rooms">{{ t('room_details', 'back_to_search_link', '空室検索に戻る') }}</a>
+    </nav>
+
+    {% if error_message %}
+        <p style="color: red;">{{ error_message|e }}</p> {# PHP side already translated #}
+    {% elseif room %}
+        <h1>{{ room.name|e }}</h1>
+        <p><strong>{{ t('room_details', 'room_type_label', '部屋タイプ') }}:</strong> {{ room.room_type_name|e }}</p>
+
+        {% if room.image_path %}
+            {# Assuming image_path is relative to an images directory accessible via site_url #}
+            {# If image_path is already a full URL or an absolute path from webroot, adjust accordingly #}
+            <img src="{{ site_url }}/{{ room.image_path|trim('/')|e('html_attr') }}" alt="{{ room.name|e }}" style="max-width: 400px; height: auto;">
+        {% else %}
+            <img src="{{ site_url }}/images/placeholder_room.png" alt="{{ t('room_details', 'no_image_alt', '部屋の画像はありません') }}" style="max-width: 400px; height: auto; border: 1px solid #ccc;">
+            <p>({{ t('room_details', 'image_placeholder_text', '画像プレースホルダー') }})</p>
+        {% endif %}
+
+        <h2>{{ t('room_details', 'details_heading', '詳細') }}</h2>
+        <p>{{ room.description|nl2br }}</p> {# nl2br is safe in Twig, no raw needed if autoescape is on for HTML context #}
+        <p><strong>{{ t('room_details', 'capacity_label', '定員') }}:</strong> {{ room.capacity|e }} {{ t('room_details', 'people_unit', '名様') }}</p>
+        <p><strong>{{ t('room_details', 'price_per_night_label', '1泊料金') }}:</strong> &yen;{{ room.price_per_night|number_format(0, '.', ',') }}</p>
+
+        <h2>{{ t('room_details', 'facilities_heading', '設備など') }}</h2>
+        <p>{{ room.room_type_description|nl2br }}</p>
+
+        <hr>
+        <h3>{{ t('room_details', 'book_this_room_heading', 'この部屋を予約する') }}</h3>
+        <form action="{{ site_url|trim('/') }}/booking" method="GET">
+            <input type="hidden" name="room_id" value="{{ room.id|e('html_attr') }}">
+            <div>
+                <label for="detail_check_in">{{ t('room_details', 'check_in_label', 'チェックイン日') }}:</label>
+                <input type="date" id="detail_check_in" name="check_in" value="{{ check_in_date|e('html_attr') }}" required>
+            </div>
+            <div>
+                <label for="detail_check_out">{{ t('room_details', 'check_out_label', 'チェックアウト日') }}:</label>
+                <input type="date" id="detail_check_out" name="check_out" value="{{ check_out_date|e('html_attr') }}" required>
+            </div>
+            <div>
+                <label for="detail_adults">{{ t('room_details', 'num_adults_label', '大人の人数') }}:</label>
+                <input type="number" id="detail_adults" name="adults" value="{{ num_adults|e('html_attr') }}" min="1" max="{{ room.capacity|e('html_attr') }}" required>
+            </div>
+            <button type="submit">{{ t('room_details', 'proceed_to_booking_button', '予約手続きへ進む') }}</button>
+        </form>
+        {# Link back to search results, using the new 'home' route for index.php #}
+        <p><a href="{{ site_url|trim('/') }}/home?check_in_date={{ check_in_date|e('url') }}&check_out_date={{ check_out_date|e('url') }}&num_adults={{ num_adults|e('url') }}&action=search_rooms">{{ t('room_details', 'see_other_rooms_link', '他の部屋も見る（検索結果に戻る）') }}</a></p>
+
+    {% else %}
+        <p>{{ t('room_details', 'room_info_not_found', '部屋情報が見つかりませんでした。') }}</p>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+    <h2>{{ t('common', 'register', '会員登録') }}</h2>
+
+    {% if errors is not empty %}
+        <div style="color: red;">
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error|e }}</li> {# Errors are already translated in PHP #}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if success_message %}
+        <p style="color: green;">{{ success_message|e }}</p> {# Success message is already translated in PHP #}
+        <p><a href="{{ site_url }}/login.php">{{ t('common', 'login_link_text', 'ログインページへ') }}</a></p>
+    {% else %}
+        <form method="POST" action="{{ site_url }}/register.php"> {# Assuming site_url does not end with / #}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+            <div>
+                <label for="name">{{ t('register', 'name_label', '氏名') }} <span style="color:red;">*</span>:</label>
+                <input type="text" id="name" name="name" value="{{ form_values.name|e('html_attr') }}" required>
+            </div>
+            <div>
+                <label for="email">{{ t('login', 'email_label', 'メールアドレス') }} <span style="color:red;">*</span>:</label> {# loginのキーを再利用 #}
+                <input type="email" id="email" name="email" value="{{ form_values.email|e('html_attr') }}" required>
+            </div>
+            <div>
+                <label for="password">{{ t('login', 'password_label', 'パスワード') }} ({{ t('register', 'password_min_length_note', '8文字以上') }}) <span style="color:red;">*</span>:</label> {# loginのキーを再利用 #}
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div>
+                <label for="password_confirm">{{ t('register', 'password_confirm_label', 'パスワード (確認用)') }} <span style="color:red;">*</span>:</label>
+                <input type="password" id="password_confirm" name="password_confirm" required>
+            </div>
+            <div>
+                <input type="checkbox" id="agree_terms" name="agree_terms" value="1">
+                <label for="agree_terms" style="display:inline; font-weight:normal;">{{ t('register', 'agree_terms_label', '利用規約に同意する') }} <span style="color:red;">*</span></label>
+                <p><small>({{ t('register', 'terms_link_placeholder', '(利用規約のページへのリンクをここに設置)') }})</small></p>
+            </div>
+            <div>
+                <button type="submit">{{ t('common', 'register', '登録する') }}</button>
+            </div>
+        </form>
+    {% endif %}
+{% endblock %}

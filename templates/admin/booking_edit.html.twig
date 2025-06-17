@@ -1,0 +1,82 @@
+{% extends "admin/base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block admin_content %}
+    <h2>{{ page_title }}</h2>
+    <p><a href="{{ site_url }}/admin/bookings_list.php">&laquo; {{ t('admin_booking_edit', 'back_to_list_link', '予約一覧に戻る') }}</a></p>
+
+    {# Flash messages for this page might be handled by _flash_messages.html.twig if errors occur after POST #}
+    {# However, if page load itself fails (e.g. booking not found), user is redirected to list page where flash will be shown #}
+    {% include 'admin/_flash_messages.html.twig' %}
+
+
+    {% if booking %} {# Only render form if booking data is loaded #}
+    <form method="POST" action="{{ site_url }}/admin/booking_edit.php?id={{ booking_id|e('url') }}" class="admin-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+        <input type="hidden" name="action" value="update_booking">
+
+        <fieldset>
+            <legend>{{ t('admin_booking_edit', 'legend_customer_info', '予約者情報') }}</legend>
+            {% if booking.user_id %}
+                <p><strong>{{ t('admin_booking_edit', 'customer_type_member', '会員') }}:</strong> {{ booking.user_name|e }} ({{ booking.user_email|e }}) - ID: {{ booking.user_id|e }}</p>
+            {% else %}
+                <p><strong>{{ t('admin_booking_edit', 'customer_type_guest', 'ゲスト') }}:</strong></p>
+                <div><label for="guest_name">{{ t('admin_booking_edit', 'guest_name_label', 'ゲスト名:') }}</label><input type="text" name="guest_name" id="guest_name" value="{{ booking.guest_name|e('html_attr') }}"></div>
+                <div><label for="guest_email">{{ t('admin_booking_edit', 'guest_email_label', 'ゲスト メール:') }}</label><input type="email" name="guest_email" id="guest_email" value="{{ booking.guest_email|e('html_attr') }}"></div>
+                <div><label for="guest_phone">{{ t('admin_booking_edit', 'guest_phone_label', 'ゲスト 電話番号:') }}</label><input type="text" name="guest_phone" id="guest_phone" value="{{ booking.guest_phone|e('html_attr') }}"></div>
+            {% endif %}
+        </fieldset>
+
+        <fieldset>
+            <legend>{{ t('admin_booking_edit', 'legend_booking_details', '予約詳細') }}</legend>
+            <div><label for="check_in_date">{{ t('admin_booking_edit', 'check_in_label', 'チェックイン日:') }}</label><input type="date" name="check_in_date" id="check_in_date" value="{{ booking.check_in_date|e('html_attr') }}"></div>
+            <div><label for="check_out_date">{{ t('admin_booking_edit', 'check_out_label', 'チェックアウト日:') }}</label><input type="date" name="check_out_date" id="check_out_date" value="{{ booking.check_out_date|e('html_attr') }}"></div>
+            <div><label for="num_adults">{{ t('admin_booking_edit', 'adults_label', '大人人数:') }}</label><input type="number" name="num_adults" id="num_adults" value="{{ booking.num_adults|e('html_attr') }}" min="1"></div>
+            <div><label for="num_children">{{ t('admin_booking_edit', 'children_label', '子供人数:') }}</label><input type="number" name="num_children" id="num_children" value="{{ booking.num_children|default(0)|e('html_attr') }}" min="0"></div>
+            <p><strong>{{ t('admin_booking_edit', 'current_room_label', '現在の部屋:') }}</strong> {{ booking.current_room_names|e }} ({{ t('admin_booking_edit', 'room_type_prefix', 'タイプ') }}: {{ booking.current_room_type_names|e }})</p>
+            <div>
+                <label for="room_id_new">{{ t('admin_booking_edit', 'change_room_label', '部屋割り当て変更:') }}</label>
+                <select name="room_id_new" id="room_id_new">
+                    <option value="">-- {{ t('admin_booking_edit', 'change_room_no_change_option', '部屋を変更しない') }} --</option>
+                    {% set first_current_room_id = (booking.current_room_ids is defined and booking.current_room_ids is not empty ? (booking.current_room_ids|split(','))[0]|trim : null) %}
+                    {% for room_item in rooms_list %}
+                        <option value="{{ room_item.id|e('html_attr') }}" {% if first_current_room_id and first_current_room_id == room_item.id %}selected{% endif %}>
+                            {{ room_item.name|e }} ({{ t('admin_booking_edit', 'capacity_prefix', '定員') }}: {{room_item.capacity|e}}名)
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div><label for="total_price">{{ t('admin_booking_edit', 'total_price_label', '合計金額 (&yen;):') }}</label><input type="number" name="total_price" id="total_price" value="{{ booking.total_price|e('html_attr') }}" step="0.01" min="0"></div>
+            <div>
+                <label for="status">{{ t('admin_booking_edit', 'status_label', '予約ステータス:') }}</label>
+                <select name="status" id="status">
+                    <option value="pending" {% if booking.status == 'pending' %}selected{% endif %}>{{ t('booking_status', 'pending', 'Pending') }}</option>
+                    <option value="confirmed" {% if booking.status == 'confirmed' %}selected{% endif %}>{{ t('booking_status', 'confirmed', 'Confirmed') }}</option>
+                    <option value="cancelled" {% if booking.status == 'cancelled' %}selected{% endif %}>{{ t('booking_status', 'cancelled', 'Cancelled') }}</option>
+                    <option value="completed" {% if booking.status == 'completed' %}selected{% endif %}>{{ t('booking_status', 'completed', 'Completed') }}</option>
+                    <option value="rejected" {% if booking.status == 'rejected' %}selected{% endif %}>{{ t('booking_status', 'rejected', 'Rejected') }}</option>
+                    <option value="no-show" {% if booking.status == 'no-show' %}selected{% endif %}>{{ t('booking_status', 'no-show', 'No-Show') }}</option>
+                </select>
+            </div>
+            <div>
+                <label for="payment_status">{{ t('admin_booking_edit', 'payment_status_label', '支払いステータス:') }}</label>
+                <select name="payment_status" id="payment_status">
+                    <option value="unpaid" {% if booking.payment_status == 'unpaid' %}selected{% endif %}>{{ t('payment_status', 'unpaid', 'Unpaid') }}</option>
+                    <option value="paid" {% if booking.payment_status == 'paid' %}selected{% endif %}>{{ t('payment_status', 'paid', 'Paid') }}</option>
+                    <option value="refunded" {% if booking.payment_status == 'refunded' %}selected{% endif %}>{{ t('payment_status', 'refunded', 'Refunded') }}</option>
+                </select>
+            </div>
+            <div><label for="special_requests">{{ t('admin_booking_edit', 'notes_label', '特記事項・管理者メモ:') }}</label><textarea name="special_requests" id="special_requests" rows="4">{{ booking.special_requests|e }}</textarea></div>
+        </fieldset>
+
+        <p><strong>{{ t('admin_booking_edit', 'created_at_label', '予約作成日時:') }}</strong> {{ booking.created_at|date("Y-m-d H:i:s") }}</p>
+        <p><strong>{{ t('admin_booking_edit', 'updated_at_label', '最終更新日時:') }}</strong> {{ booking.updated_at|date("Y-m-d H:i:s") }}</p>
+
+        <div><button type="submit">{{ t('admin_booking_edit', 'submit_button_update', '予約情報を更新する') }}</button></div>
+    </form>
+    {% elseif errors is empty %} {# booking not found and no other errors yet, but PHP redirects now #}
+    {# This part might not be reached if PHP redirects on booking load failure #}
+    <p>{{ t('admin_booking_edit', 'error_booking_load_failed', '予約情報を読み込めませんでした。') }}</p>
+    {% endif %} {# errors is not empty will be caught by _flash_messages.html.twig if it's included at top #}
+{% endblock %}

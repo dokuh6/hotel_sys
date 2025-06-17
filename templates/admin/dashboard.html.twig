@@ -1,0 +1,60 @@
+{% extends "admin/base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block admin_content %}
+    <h2>{{ page_title }}</h2>
+    <p>{{ t('admin_dashboard', 'welcome_text', '管理画面へようこそ。左のメニューから各管理機能をご利用ください。') }}</p>
+
+    {% if dashboard_error %}
+        <div class="message error">{{ dashboard_error|e }}</div>
+    {% endif %}
+
+    <div class="widget-container" style="display: flex; gap: 20px; flex-wrap: wrap;">
+         <div class="widget" style="flex-basis: 200px;">
+            <h3>{{ t('admin_dashboard', 'widget_total_bookings', '総予約数') }}</h3>
+            <p style="font-size: 2rem; margin:0;">{{ total_bookings|e }}</p>
+            <small>({{ t('admin_dashboard', 'widget_total_bookings_note', 'キャンセルを除く') }})</small>
+        </div>
+         <div class="widget" style="flex-basis: 200px;">
+            <h3>{{ t('admin_dashboard', 'widget_total_rooms', '総部屋数') }}</h3>
+            <p style="font-size: 2rem; margin:0;">{{ total_rooms|e }}</p>
+            <small>({{ t('admin_dashboard', 'widget_total_rooms_note', 'アクティブな部屋') }})</small>
+        </div>
+        <div class="widget" style="flex-basis: 200px;">
+            <h3>{{ t('admin_dashboard', 'widget_total_users', '総顧客数') }}</h3>
+            <p style="font-size: 2rem; margin:0;">{{ total_users|e }}</p>
+            <small>({{ t('admin_dashboard', 'widget_total_users_note', 'アクティブな会員') }})</small>
+        </div>
+    </div>
+
+    <div class="widget">
+        <h3>{{ t('admin_dashboard', 'widget_recent_bookings', '最近の予約 (上位5件)') }}</h3>
+        {% if recent_bookings is not empty %}
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>{{ t('admin_dashboard', 'col_id', 'ID') }}</th>
+                    <th>{{ t('admin_dashboard', 'col_guest_name', 'ゲスト名') }}</th>
+                    <th>{{ t('admin_dashboard', 'col_check_in', 'チェックイン') }}</th>
+                    <th>{{ t('admin_dashboard', 'col_total_price', '合計金額') }}</th>
+                    <th>{{ t('admin_dashboard', 'col_status', 'ステータス') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for rb in recent_bookings %}
+                <tr>
+                    <td>{{ rb.id|e }}</td>
+                    <td>{{ rb.guest_name|e }}</td>
+                    <td>{{ rb.check_in_date|e }}</td>
+                    <td>&yen;{{ rb.total_price|number_format(0, '.', ',') }}</td>
+                    <td>{{ t('booking_status', rb.status, rb.status|capitalize)|e }}</td> {# Assumes booking_status group exists #}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>{{ t('admin_dashboard', 'no_recent_bookings', '最近の予約はありません。') }}</p>
+        {% endif %}
+    </div>
+{% endblock %}

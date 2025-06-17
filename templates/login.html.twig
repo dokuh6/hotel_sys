@@ -1,0 +1,33 @@
+{% extends "base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+    <h2>{{ t('common', 'login', 'ログイン') }}</h2>
+
+    {% if errors is not empty %}
+        <div style="color: red;">
+            <ul>
+                {% for error in errors %}
+                    <li>{{ error|e }}</li> {# Errors are already translated in PHP #}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="POST" action="{{ site_url }}/login.php"> {# Assuming site_url does not end with / #}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+        <div>
+            <label for="email">{{ t('login', 'email_label', 'メールアドレス:') }}</label>
+            <input type="email" id="email" name="email" value="{{ email_value|e('html_attr') }}" required>
+        </div>
+        <div>
+            <label for="password">{{ t('login', 'password_label', 'パスワード:') }}</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div>
+            <button type="submit">{{ t('common', 'login', 'ログイン') }}</button>
+        </div>
+        <p><a href="#">{{ t('login', 'forgot_password_link', 'パスワードをお忘れですか？') }}</a> ({{ t('common', 'unimplemented', '未実装') }})</p>
+    </form>
+{% endblock %}

@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 実在するファイルやディレクトリは直接アクセスを許可
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # 上記以外は index.php にルーティング
+    RewriteRule ^(.*)$ index.php?path=$1 [L,QSA]
+</IfModule>
+
+# Options -Indexes # ディレクトリリスティングを無効化 (セキュリティのため推奨)
+# AddDefaultCharset UTF-8 # 文字コード指定

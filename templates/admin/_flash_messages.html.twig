@@ -1,0 +1,12 @@
+{% if errors is defined and errors is not empty %}
+<div class="message error">
+    <ul>
+        {% for error in errors %}
+            <li>{{ error|e }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% if success_message is defined and success_message %}
+<div class="message success">{{ success_message|e }}</div>
+{% endif %}

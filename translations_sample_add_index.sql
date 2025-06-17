@@ -1,0 +1,25 @@
+-- Index Page (Room Search) - 追加分
+INSERT INTO translations (language_id, group_key, item_key, `text`) VALUES
+(1, 'index', 'capacity_label', '定員'),
+(2, 'index', 'capacity_label', 'Capacity'),
+(1, 'index', 'people_unit', '名様'),
+(2, 'index', 'people_unit', 'people'),
+(1, 'index', 'price_label', '料金'),
+(2, 'index', 'price_label', 'Price'),
+(1, 'index', 'per_night_unit', '泊'),
+(2, 'index', 'per_night_unit', 'night'),
+(1, 'index', 'view_and_book_link', '詳細を見て予約する'),
+(2, 'index', 'view_and_book_link', 'View Details & Book'),
+(1, 'index', 'error_dates_required', 'チェックイン日とチェックアウト日を入力してください。'),
+(2, 'index', 'error_dates_required', 'Please enter check-in and check-out dates.'),
+(1, 'index', 'error_checkout_after_checkin', 'チェックアウト日はチェックイン日より後の日付を選択してください。'),
+(2, 'index', 'error_checkout_after_checkin', 'Check-out date must be after check-in date.'),
+(1, 'index', 'error_checkin_not_past', 'チェックイン日には本日以降の日付を選択してください。'),
+(2, 'index', 'error_checkin_not_past', 'Check-in date must be today or a future date.'),
+(1, 'index', 'error_min_one_adult', '大人の人数は1名以上を選択してください。'),
+(2, 'index', 'error_min_one_adult', 'Please select at least one adult.'),
+(1, 'index', 'error_search_failed', 'データベース接続または検索中にエラーが発生しました。'),
+(2, 'index', 'error_search_failed', 'An error occurred during database connection or search.'),
+(1, 'common', 'hotel_booking_system', 'ホテル予約システム'),
+(2, 'common', 'hotel_booking_system', 'Hotel Booking System')
+ON DUPLICATE KEY UPDATE `text` = VALUES(`text`);

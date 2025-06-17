@@ -1,0 +1,49 @@
+{% extends "admin/base.html.twig" %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block admin_stylesheets %}
+    <style>
+        .login-page-content { display: flex; justify-content: center; align-items: center; min-height: calc(100vh - 60px); /* Adjust 60px if admin-header height changes */ }
+        .login-container { background-color: #fff; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); width: 320px; }
+        .login-container h2 { text-align: center; margin-bottom: 1em; }
+        .login-container div { margin-bottom: 1em; }
+        .login-container label { display: block; margin-bottom: 0.5em; }
+        .login-container input[type="text"],
+        .login-container input[type="password"] { width: 100%; padding: 0.8em; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .login-container button { width: 100%; padding: 0.8em; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .login-container button:hover { background-color: #0056b3; }
+        .errors { color: red; margin-bottom: 1em; padding: 0.5em; border: 1px solid red; border-radius: 4px; background-color: #ffebeb; list-style-type: none; text-align:left;}
+        .errors li { margin:0; padding:0; }
+    </style>
+{% endblock %}
+
+
+{% block admin_content %}
+    <div class="login-container">
+        <h2>{{ t('admin_login', 'form_heading', '管理者ログイン') }}</h2>
+
+        {% if errors is not empty %}
+            <ul class="errors">
+                {% for error in errors %}
+                    <li>{{ error|e }}</li> {# PHP side already translated #}
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <form method="POST" action="{{ site_url }}/admin/login.php">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token|e('html_attr') }}">
+            <div>
+                <label for="username">{{ t('admin_login', 'username_label', 'ユーザー名:') }}</label>
+                <input type="text" id="username" name="username" value="{{ username_value|e('html_attr') }}" required autofocus>
+            </div>
+            <div>
+                <label for="password">{{ t('admin_login', 'password_label', 'パスワード:') }}</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div>
+                <button type="submit">{{ t('common', 'login', 'ログイン') }}</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}
