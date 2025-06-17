@@ -1,0 +1,5 @@
+/vendor/
+/cache/
+config/config.php # ローカル設定は含めないか、config.php.example を用意する
+*.log
+.env # 環境変数ファイルもあれば
