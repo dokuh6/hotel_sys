@@ -1,0 +1,6 @@
+{
+    "require": {
+        "twig/twig": "^3.21",
+        "guzzlehttp/guzzle": " 6.5.8"
+    }
+}
