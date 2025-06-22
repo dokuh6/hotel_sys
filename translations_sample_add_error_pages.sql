@@ -9,7 +9,8 @@ INSERT INTO translations (language_id, group_key, item_key, `text`) VALUES
 (1, 'error_page', '500_message', '申し訳ございません。システム内部で予期せぬエラーが発生しました。'), (2, 'error_page', '500_message', 'We are sorry, but an unexpected internal error has occurred.'),
 (1, 'error_page', '500_details_heading', 'エラー詳細 (開発モード時):'), (2, 'error_page', '500_details_heading', 'Error Details (Development Mode):'),
 (1, 'error_page', '500_message_prod', 'サーバー内部でエラーが発生しました。しばらくしてから再度お試しいただくか、管理者にお問い合わせください。'), (2, 'error_page', '500_message_prod', 'An internal server error occurred. Please try again later or contact the administrator.'),
-(1, 'error_page', '500_back_link', 'トップページに戻る'), (2, 'error_page', '500_back_link', 'Back to Homepage')
+(1, 'error_page', '500_back_link', 'トップページに戻る'), (2, 'error_page', '500_back_link', 'Back to Homepage'),
+(1, 'common', 'error_db_generic', 'データベースエラーが発生しました。'), (2, 'common', 'error_db_generic', 'A database error occurred.')
 ON DUPLICATE KEY UPDATE `text` = VALUES(`text`);
 
 -- Booking form specific error messages used in the "DEBUG_MODE" example

@@ -171,6 +171,10 @@ switch ($path) {
     // case 'mypage':
     //    require __DIR__ . '/mypage.php'; // Or move logic here
     //    exit; // mypage.php will handle rendering
+    // NOTE: The order of regex-based routes and fixed routes matters if there's ambiguity.
+    // For instance, if 'room' could be a fixed route and 'room/123' a regex one,
+    // the regex should usually come first if it's more specific, or careful ordering is needed.
+    // In this case, 'room/...' and 'booking' are distinct enough.
 
     case preg_match('/^room\/(\d+)$/', $path, $matches) ? $path : '': // Matches 'room/123'
         $room_id_from_path = (int)$matches[1];
@@ -327,8 +331,24 @@ switch ($path) {
 
                     } catch (Exception \$e) {
                         if (\$conn_book_route) \$conn_book_route->rollback();
-                        $template_vars['booking_error_message'] = \$e->getMessage(); // Show specific translated error from throw
-                        error_log("Booking Process Error (Router): " . \$e->getMessage());
+                        // DEBUG_MODE sensitive error message
+                        $err_msg_key_booking = DEBUG_MODE ? 'error_booking_exception_debug' : 'error_booking_exception_prod';
+                        // $e->getMessage() could already be a translated key if thrown manually with get_translation()
+                        // If it's a generic technical message, then wrap it.
+                        $detailed_error_message = $e->getMessage();
+                        if (strpos($detailed_error_message, 'SQLSTATE[') !== false || strpos($detailed_error_message, 'Duplicate entry') !== false ){
+                            // Avoid showing raw SQL errors to user even in debug mode for this part of message
+                            $user_facing_detail = get_translation('common', 'error_db_generic', 'A database error occurred.');
+                        } else {
+                            $user_facing_detail = h($detailed_error_message);
+                        }
+
+                        if (DEBUG_MODE) {
+                             $template_vars['booking_error_message'] = str_replace('%msg%', $user_facing_detail, get_translation('booking_form', $err_msg_key_booking, 'Booking Error (D): %msg%'));
+                        } else {
+                             $template_vars['booking_error_message'] = get_translation('booking_form', $err_msg_key_booking, 'An unexpected error occurred during booking. Please contact support.');
+                        }
+                        error_log("Booking Process Error (Router): RoomID {$room_id_bf}, Guest {$guest_email_bf} - {$e->getMessage()} - Trace: {$e->getTraceAsString()}");
                     } finally { if (\$conn_book_route) \$conn_book_route->close(); }
                 }
             }
